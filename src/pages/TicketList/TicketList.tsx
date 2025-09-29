@@ -131,24 +131,14 @@ const TicketList: React.FC = () => {
         
         
         if (apiTickets.length > 0) {
-          console.log('🔍 Raw API tickets:', apiTickets);
-          
           const transformedTickets: Ticket[] = apiTickets.map((ticket: any, index: number) => {
-            console.log('🔍 Processing ticket:', {
-              raw: ticket,
-              ticket_number: ticket.ticket_number,
-              title: ticket.title,
-              priority_name: ticket.priority_name,
-              status: ticket.status
-            });
-            
             // Check if we have a locally stored priority for this ticket
             const localPriorities = JSON.parse(localStorage.getItem('ticketPriorities') || '{}');
             const localPriority = localPriorities[ticket.ticket_number || ticket.id];
             
             const finalPriority = localPriority || ticket.priority_name || ticket.priority || 'Low';
             
-            const transformedTicket = {
+            return {
               id: ticket.ticket_number || ticket.id || `TC-${ticket.id}`,
               requester: ticket.user_name || 'Unknown',
               issue: ticket.title || 'No description',
@@ -179,9 +169,6 @@ const TicketList: React.FC = () => {
                 }
               })()
             };
-            
-            console.log('🔍 Transformed ticket:', transformedTicket);
-            return transformedTicket;
           });
           
           
@@ -403,49 +390,39 @@ const TicketList: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredTickets.map((ticket, index) => {
-                  console.log('🔍 Rendering ticket:', {
-                    id: ticket.id,
-                    issue: ticket.issue,
-                    priority: ticket.priority,
-                    status: ticket.status,
-                    createdAt: ticket.createdAt
-                  });
-                  
-                  return (
-                    <tr 
-                      key={`${ticket.id}-${index}`} 
-                      className="ticket-row"
-                      onClick={() => handleTicketClick(ticket.id)}
-                    >
-                      <td className="ticket-id-cell">
-                        {ticket.id}
-                        {ticket.isOffline && <span className="offline-indicator" title="Created offline"> 📱</span>}
-                      </td>
-                      <td className="ticket-subject-cell">{ticket.issue}</td>
-                      <td className="priority-cell">
-                        <span 
-                          className={`priority-badge priority-${ticket.priority.toLowerCase()}`}
-                          style={{
-                            backgroundColor: ticket.priorityBgColor || '#e2e8f0',
-                            color: ticket.priorityTextColor || '#4a5568'
-                          }}
-                        >
-                          {ticket.priority}
-                        </span>
-                      </td>
-                      <td className="status-cell">
-                        <span 
-                          className={`status-badge status-${ticket.status.toLowerCase().replace('-', '')}`}
-                          style={getStatusStyling(ticket.status)}
-                        >
-                          {ticket.status}
-                        </span>
-                      </td>
-                      <td className="date-cell">{ticket.createdAt || ticket.time}</td>
-                    </tr>
-                  );
-                })}
+                {filteredTickets.map((ticket, index) => (
+                  <tr 
+                    key={`${ticket.id}-${index}`} 
+                    className="ticket-row"
+                    onClick={() => handleTicketClick(ticket.id)}
+                  >
+                    <td className="ticket-id-cell">
+                      {ticket.id}
+                      {ticket.isOffline && <span className="offline-indicator" title="Created offline"> 📱</span>}
+                    </td>
+                    <td className="ticket-subject-cell">{ticket.issue}</td>
+                    <td className="priority-cell">
+                      <span 
+                        className={`priority-badge priority-${ticket.priority.toLowerCase()}`}
+                        style={{
+                          backgroundColor: ticket.priorityBgColor || '#e2e8f0',
+                          color: ticket.priorityTextColor || '#4a5568'
+                        }}
+                      >
+                        {ticket.priority}
+                      </span>
+                    </td>
+                    <td className="status-cell">
+                      <span 
+                        className={`status-badge status-${ticket.status.toLowerCase().replace('-', '')}`}
+                        style={getStatusStyling(ticket.status)}
+                      >
+                        {ticket.status}
+                      </span>
+                    </td>
+                    <td className="date-cell">{ticket.createdAt || ticket.time}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
