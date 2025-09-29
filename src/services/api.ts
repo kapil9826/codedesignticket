@@ -267,12 +267,161 @@ export class ApiService {
       }
 
       console.log('🔍 Fetching ticket details for ID:', ticketId);
+      console.log('🔍 Ticket ID type:', typeof ticketId);
+      console.log('🔍 Ticket ID value:', ticketId);
       
-      // Use the correct endpoint for ticket details
-      const response = await fetchWithTimeout(`${API_BASE_URL}/ticket-details?&support_tickets_id=${ticketId}`, {
+      // Get the actual database ID from the ticket data
+      let databaseId = ticketId;
+      
+      // If the ticket ID is already numeric, use it directly
+      if (typeof ticketId === 'string' && /^\d+$/.test(ticketId)) {
+        console.log('🔢 Ticket ID is already numeric, using directly:', ticketId);
+        databaseId = ticketId;
+      } else {
+        console.log('🔍 Ticket ID is not numeric, need to find database ID');
+      }
+      
+      // Only try to fetch tickets if we don't already have a numeric ID
+      if (!/^\d+$/.test(String(databaseId))) {
+        try {
+          console.log('🔄 Fetching tickets to find database ID for ticket details...');
+          const ticketsResult = await this.getTickets(1, 100);
+        console.log('📡 Tickets fetch result for ticket details:', {
+          success: ticketsResult.success,
+          hasData: !!ticketsResult.data,
+          dataType: typeof ticketsResult.data,
+          isArray: Array.isArray(ticketsResult.data?.data)
+        });
+        
+        if (ticketsResult.success && ticketsResult.data && ticketsResult.data.data) {
+          const tickets = ticketsResult.data.data;
+          console.log('📋 Available tickets for ticket details lookup:', tickets.map((t: any) => ({
+            id: t.id,
+            ticket_number: t.ticket_number,
+            title: t.title
+          })));
+          
+          console.log('🔍 Looking for ticket with ID:', ticketId);
+          console.log('🔍 Available ticket numbers:', tickets.map((t: any) => t.ticket_number));
+          console.log('🔍 Available ticket IDs:', tickets.map((t: any) => t.id));
+          
+          const matchingTicket = tickets.find((ticket: any) => 
+            ticket.ticket_number === ticketId || ticket.id === ticketId
+          );
+          
+          console.log('🔍 Matching result:', {
+            found: !!matchingTicket,
+            ticketId: ticketId,
+            matchingTicket: matchingTicket ? {
+              id: matchingTicket.id,
+              ticket_number: matchingTicket.ticket_number,
+              title: matchingTicket.title
+            } : null
+          });
+          
+          if (matchingTicket) {
+            databaseId = matchingTicket.id;
+            console.log('🔢 Found matching ticket for ticket details:', { 
+              ticketNumber: ticketId, 
+              databaseId: matchingTicket.id,
+              ticketData: matchingTicket
+            });
+          } else {
+            console.log('⚠️ No matching ticket found for ticket details:', ticketId);
+            console.log('🔍 Available ticket numbers:', tickets.map((t: any) => t.ticket_number));
+            console.log('🔍 Available ticket IDs:', tickets.map((t: any) => t.id));
+            
+            // Fallback: try to extract from ticket number
+            if (typeof ticketId === 'string' && !/^\d+$/.test(ticketId)) {
+              const match = ticketId.match(/\d+/);
+              if (match) {
+                databaseId = match[0];
+                console.log('🔢 Using extracted ID from ticket number for ticket details:', databaseId);
+              }
+            }
+          }
+        } else {
+          console.log('⚠️ Could not fetch tickets for ticket details ID lookup');
+          console.log('📡 Tickets result for ticket details:', ticketsResult);
+          
+          // Fallback: try to extract from ticket number
+          if (typeof ticketId === 'string' && !/^\d+$/.test(ticketId)) {
+            const match = ticketId.match(/\d+/);
+            if (match) {
+              databaseId = match[0];
+              console.log('🔢 Using extracted ID from ticket number for ticket details:', databaseId);
+            }
+          }
+        }
+        } catch (error) {
+          console.log('⚠️ Error fetching tickets for ticket details ID lookup:', error);
+          
+          // Fallback: try to extract from ticket number
+          if (typeof ticketId === 'string' && !/^\d+$/.test(ticketId)) {
+            const match = ticketId.match(/\d+/);
+            if (match) {
+              databaseId = match[0];
+              console.log('🔢 Using extracted ID from ticket number for ticket details:', databaseId);
+            }
+          }
+        }
+      } else {
+        console.log('🔢 Skipping ticket lookup - already have numeric database ID:', databaseId);
+      }
+      
+      console.log('🔢 Using database ID for ticket details:', { original: ticketId, databaseId });
+      
+      // Validate that we have a valid database ID
+      if (!databaseId || databaseId === '') {
+        console.error('❌ No valid database ID found for ticket details:', ticketId);
+        return { success: false, error: 'No valid database ID found for ticket' };
+      }
+      
+      // Ensure database ID is numeric
+      if (!/^\d+$/.test(String(databaseId))) {
+        console.error('❌ Database ID is not numeric for ticket details:', databaseId);
+        return { success: false, error: 'Database ID must be numeric for ticket details endpoint' };
+      }
+      
+      console.log('🔍 About to call ticket details API with database ID:', databaseId);
+      
+      // Try different possible endpoints for ticket details with notes
+      const possibleTicketDetailsEndpoints = [
+        `${API_BASE_URL}/ticket-details?&support_tickets_id=${databaseId}`,
+        `${API_BASE_URL}/ticket-details?support_tickets_id=${databaseId}&include_notes=true`,
+        `${API_BASE_URL}/ticket-details?support_tickets_id=${databaseId}&with_notes=true`,
+        `${API_BASE_URL}/ticket-details?support_tickets_id=${databaseId}&notes=true`,
+        `${API_BASE_URL}/ticket-details?support_tickets_id=${databaseId}&with_comments=true`,
+        `${API_BASE_URL}/ticket-details?support_tickets_id=${databaseId}&include_comments=true`
+      ];
+      
+      let response;
+      let successfulEndpoint = null;
+      
+      for (const endpoint of possibleTicketDetailsEndpoints) {
+        try {
+          console.log('🔍 Trying ticket details endpoint:', endpoint);
+          response = await fetchWithTimeout(endpoint, {
         method: 'GET',
         headers: createHeaders(),
       }, 10000);
+          
+          if (response.ok) {
+            successfulEndpoint = endpoint;
+            console.log('✅ Found working ticket details endpoint:', endpoint);
+            break;
+          } else {
+            console.log('❌ Endpoint failed:', endpoint, 'Status:', response.status);
+          }
+        } catch (error) {
+          console.log('❌ Endpoint error:', endpoint, error);
+        }
+      }
+      
+      if (!response || !response.ok) {
+        console.log('❌ No working ticket details endpoint found');
+        return { success: false, error: 'No working ticket details endpoint found' };
+      }
 
       console.log('🔍 Ticket details response status:', response.status);
 
@@ -286,13 +435,41 @@ export class ApiService {
       const data = await response.json();
       console.log('🔍 Ticket details API response:', data);
       console.log('🔍 Full API response structure:', JSON.stringify(data, null, 2));
+      console.log('🔍 API Response Analysis:', {
+        status: data.status,
+        message: data.message,
+        hasData: !!data.data,
+        dataType: typeof data.data,
+        isSuccess: data.status === '1',
+        responseStatus: response.status,
+        responseOk: response.ok
+      });
       
       // Check if documents field exists and log its content
       if (data.data) {
         console.log('🔍 Documents field in API response:', data.data.documents);
         console.log('🔍 Documents field type:', typeof data.data.documents);
         console.log('🔍 Documents field length:', data.data.documents ? data.data.documents.length : 'null/undefined');
+        console.log('🔍 Notes field in API response:', data.data.notes);
+        console.log('🔍 Notes field type:', typeof data.data.notes);
+        console.log('🔍 Notes field length:', data.data.notes ? data.data.notes.length : 'null/undefined');
       }
+      
+      // Log the notes field status
+      if (data.data) {
+        if (data.data.notes && Array.isArray(data.data.notes)) {
+          console.log('✅ Notes field is populated with', data.data.notes.length, 'comments');
+          console.log('📝 Notes content:', data.data.notes);
+        } else if (data.data.notes === null) {
+          console.log('ℹ️ Notes field is null - no comments exist for this ticket yet');
+        } else {
+          console.log('⚠️ Notes field has unexpected format:', data.data.notes);
+        }
+      }
+      
+      // Only try to fetch notes separately if the API doesn't return them and we expect them to exist
+      // For now, we'll trust the API response since it's working correctly
+      console.log('✅ Using notes directly from ticket details API response');
       
       return { success: response.ok, data, status: response.status };
     } catch (error: any) {
@@ -384,7 +561,7 @@ export class ApiService {
     }
   }
 
-  // Add ticket note/comment with attachments using the new API endpoint
+  // Add ticket note/comment with attachments using the new API endpoint - SIMPLIFIED VERSION
   static async addTicketNote(ticketId: string, comment: string, attachments?: File[]) {
     try {
       if (!isOnline()) {
@@ -400,42 +577,211 @@ export class ApiService {
 
       const formData = new FormData();
       
-      // We need to use the database ID, not the ticket number
-      // For now, let's try to get the actual database ID from the ticket data
+      // Get the actual database ID from the ticket data
       let databaseId = ticketId;
       
-      // If we have a ticket number like "CND1020", we need to find the corresponding database ID
-      // This is a temporary solution - ideally we should store the database ID when loading tickets
       console.log('🔍 Looking for database ID for ticket:', ticketId);
+      console.log('🔍 Ticket ID type:', typeof ticketId);
+      console.log('🔍 Ticket ID value:', ticketId);
+      console.log('🔍 Is numeric check:', /^\d+$/.test(String(ticketId)));
       
-      // Try to get the database ID from localStorage or make an API call to find it
-      // For now, let's use a mapping approach
-      const ticketIdMapping: { [key: string]: string } = {
-        'CND1020': '21',
-        'CND1021': '22',
-        // Add more mappings as needed
-      };
-      
-      if (ticketIdMapping[ticketId]) {
-        databaseId = ticketIdMapping[ticketId];
-        console.log('🔢 Found database ID mapping:', { ticketNumber: ticketId, databaseId });
+      // If the ticket ID is already numeric, use it directly (this might be a new ticket with database ID)
+      if (typeof ticketId === 'string' && /^\d+$/.test(ticketId)) {
+        console.log('🔢 Ticket ID is already numeric (likely database ID for new ticket):', ticketId);
+        databaseId = ticketId;
+        console.log('✅ Using numeric ticket ID directly as database ID');
+        console.log('✅ Skipping tickets list lookup for numeric ID');
       } else {
-        console.log('⚠️ No database ID mapping found for:', ticketId);
+        console.log('🔍 Ticket ID is not numeric, need to find database ID');
+        console.log('🔍 Will attempt to find database ID from tickets list...');
+      
+      // Try to get the database ID from the tickets data
+      try {
+        console.log('🔄 Fetching tickets to find database ID...');
+        // First, try to get tickets to find the correct database ID
+        // For new tickets, we might need to fetch more pages or use a different approach
+        const ticketsResult = await this.getTickets(1, 1000);
+        console.log('📡 Tickets fetch result:', {
+          success: ticketsResult.success,
+          hasData: !!ticketsResult.data,
+          dataType: typeof ticketsResult.data,
+          isArray: Array.isArray(ticketsResult.data?.data)
+        });
+        
+        if (ticketsResult.success && ticketsResult.data && ticketsResult.data.data) {
+          const tickets = ticketsResult.data.data;
+          console.log('📋 Available tickets:', tickets.map((t: any) => ({
+            id: t.id,
+            ticket_number: t.ticket_number,
+            title: t.title
+          })));
+          
+          console.log('🔍 Searching for ticket in list...');
+          console.log('🔍 Looking for ticket ID:', ticketId);
+          console.log('🔍 Available tickets in list:', tickets.length);
+          
+          const matchingTicket = tickets.find((ticket: any) => {
+            const matchesTicketNumber = ticket.ticket_number === ticketId;
+            const matchesId = ticket.id === ticketId;
+            console.log('🔍 Checking ticket:', {
+              id: ticket.id,
+              ticket_number: ticket.ticket_number,
+              matchesTicketNumber,
+              matchesId,
+              target: ticketId
+            });
+            return matchesTicketNumber || matchesId;
+          });
+          
+          if (matchingTicket) {
+            databaseId = matchingTicket.id;
+            console.log('🔢 Found matching ticket:', { 
+              ticketNumber: ticketId, 
+              databaseId: matchingTicket.id,
+              ticketData: matchingTicket 
+            });
+            console.log('✅ Successfully resolved database ID from tickets list');
+          } else {
+            console.log('⚠️ No matching ticket found for:', ticketId);
+            console.log('🔍 Available ticket numbers:', tickets.map((t: any) => t.ticket_number));
+            console.log('🔍 Available ticket IDs:', tickets.map((t: any) => t.id));
+            
+            // For new tickets, try to fetch more pages or use a different approach
+            console.log('🔄 Ticket not found in first 100, trying to fetch more pages...');
+            try {
+              const moreTicketsResult = await this.getTickets(1, 1000); // Try to get more tickets
+              if (moreTicketsResult.success && moreTicketsResult.data && moreTicketsResult.data.data) {
+                const moreTickets = moreTicketsResult.data.data;
+                console.log('📋 More tickets available:', moreTickets.length);
+                
+                const matchingTicketInMore = moreTickets.find((ticket: any) => 
+                  ticket.ticket_number === ticketId || ticket.id === ticketId
+                );
+                
+                if (matchingTicketInMore) {
+                  databaseId = matchingTicketInMore.id;
+                  console.log('🔢 Found matching ticket in extended search:', { 
+                    ticketNumber: ticketId, 
+                    databaseId: matchingTicketInMore.id,
+                    ticketData: matchingTicketInMore 
+                  });
+                } else {
+                  console.log('⚠️ Still no matching ticket found in extended search');
+                  // Fallback: try to extract from ticket number or use as-is
+                  if (typeof ticketId === 'string' && !/^\d+$/.test(ticketId)) {
+                    const match = ticketId.match(/\d+/);
+                    if (match) {
+                      databaseId = match[0];
+                      console.log('🔢 Using extracted ID from ticket number:', databaseId);
+                    }
+                  }
+                }
+              } else {
+                console.log('⚠️ Could not fetch more tickets');
+                // Fallback: try to extract from ticket number or use as-is
+                if (typeof ticketId === 'string' && !/^\d+$/.test(ticketId)) {
+                  const match = ticketId.match(/\d+/);
+                  if (match) {
+                    databaseId = match[0];
+                    console.log('🔢 Using extracted ID from ticket number:', databaseId);
+                  }
+                }
+              }
+            } catch (error) {
+              console.log('⚠️ Error fetching more tickets:', error);
+              // Fallback: try to extract from ticket number or use as-is
+              if (typeof ticketId === 'string' && !/^\d+$/.test(ticketId)) {
+                const match = ticketId.match(/\d+/);
+                if (match) {
+                  databaseId = match[0];
+                  console.log('🔢 Using extracted ID from ticket number:', databaseId);
+                }
+              }
+            }
+          }
+        } else {
+          console.log('⚠️ Could not fetch tickets to find database ID');
+          console.log('📡 Tickets result:', ticketsResult);
+          // Fallback: try to extract from ticket number or use as-is
+          if (typeof ticketId === 'string' && !/^\d+$/.test(ticketId)) {
+            const match = ticketId.match(/\d+/);
+            if (match) {
+              databaseId = match[0];
+              console.log('🔢 Using extracted ID from ticket number:', databaseId);
+            }
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ Error fetching tickets for ID lookup:', error);
         // Fallback: try to extract from ticket number or use as-is
         if (typeof ticketId === 'string' && !/^\d+$/.test(ticketId)) {
           const match = ticketId.match(/\d+/);
           if (match) {
             databaseId = match[0];
+            console.log('🔢 Using extracted ID from ticket number:', databaseId);
           }
         }
       }
+      } // Close the else block
       
       console.log('🔢 Using database ID:', { original: ticketId, databaseId });
       
+      // Validate that we have a valid database ID
+      if (!databaseId || databaseId === '') {
+        console.error('❌ No valid database ID found for ticket:', ticketId);
+        console.log('🔄 Trying to use ticket ID directly as fallback...');
+        databaseId = ticketId;
+      }
+      
+      // Additional validation: if ticket ID is numeric, use it directly regardless of lookup result
+      if (typeof ticketId === 'string' && /^\d+$/.test(ticketId)) {
+        console.log('🔢 Ticket ID is numeric, using it directly as database ID:', ticketId);
+        databaseId = ticketId;
+      }
+      
+      // Ensure database ID is a string
+      const stringDatabaseId = String(databaseId);
+      console.log('🔢 Using string database ID:', stringDatabaseId);
+      
+      // If the database ID is not numeric, try to extract numeric part
+      if (!/^\d+$/.test(stringDatabaseId)) {
+        console.log('⚠️ Database ID is not numeric, trying to extract numeric part...');
+        const match = stringDatabaseId.match(/\d+/);
+        if (match) {
+          databaseId = match[0];
+          console.log('🔢 Extracted numeric ID:', databaseId);
+        } else {
+          console.error('❌ Cannot extract numeric ID from:', stringDatabaseId);
+          return { success: false, error: 'Cannot extract numeric ID from ticket identifier' };
+        }
+      }
+      
       // Use the correct field names from the working Postman request
-      formData.append('support_tickets_id', databaseId);
+      const finalDatabaseId = String(databaseId);
+      formData.append('support_tickets_id', finalDatabaseId);
       formData.append('note', comment);
       formData.append('user_name', getUserName());
+      
+      // Add additional fields that might be required
+      formData.append('ticket_id', finalDatabaseId);
+      formData.append('comment', comment);
+      formData.append('message', comment);
+      formData.append('description', comment);
+      formData.append('created_by', getUserName());
+      formData.append('updated_by', getUserName());
+      formData.append('status', '1');
+      formData.append('is_active', '1');
+      
+      // Get auth token first
+      const token = getAuthToken();
+      if (!token) {
+        return { success: false, error: 'Authentication token not found' };
+      }
+      
+      // Add authentication token as form field
+      formData.append('access_token', token);
+      formData.append('token', token);
+      formData.append('auth_token', token);
       
       // Add attachments if provided
       if (attachments && attachments.length > 0) {
@@ -460,11 +806,40 @@ export class ApiService {
         }
       }
 
-      // Get auth token
-      const token = getAuthToken();
-      if (!token) {
-        return { success: false, error: 'Authentication token not found' };
-      }
+      // Additional debugging for API requirements
+      console.log('🔍 API Requirements Check:', {
+        hasSupportTicketsId: formData.has('support_tickets_id'),
+        hasNote: formData.has('note'),
+        hasUserName: formData.has('user_name'),
+        hasTicketId: formData.has('ticket_id'),
+        hasComment: formData.has('comment'),
+        hasMessage: formData.has('message'),
+        hasDescription: formData.has('description'),
+        hasCreatedBy: formData.has('created_by'),
+        hasUpdatedBy: formData.has('updated_by'),
+        hasStatus: formData.has('status'),
+        hasIsActive: formData.has('is_active'),
+        hasAccessToken: formData.has('access_token'),
+        hasToken: formData.has('token'),
+        hasAuthToken: formData.has('auth_token'),
+        supportTicketsIdValue: formData.get('support_tickets_id'),
+        noteValue: formData.get('note'),
+        userNameValue: formData.get('user_name')
+      });
+      
+      // Token already declared above
+      
+      // Additional debugging
+      console.log('🔍 API Request Details:', {
+        url: `${API_BASE_URL}/add-ticket-note`,
+        method: 'POST',
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        formDataKeys: Array.from(formData.keys()),
+        supportTicketsId: databaseId,
+        noteLength: comment.length,
+        attachmentsCount: attachments?.length || 0
+      });
 
       console.log('🔑 Using auth token:', token);
       console.log('🌐 API URL:', `${API_BASE_URL}/add-ticket-note`);
@@ -472,7 +847,19 @@ export class ApiService {
       // Try different authentication approaches
       let response;
       
-      // First try without Authorization header (like in Postman)
+      // First try with token in URL parameters
+      try {
+        response = await fetchWithTimeout(`${API_BASE_URL}/add-ticket-note?access_token=${token}`, {
+          method: 'POST',
+          body: formData,
+        }, 15000);
+        console.log('📡 Response with URL token:', response.status);
+      } catch (error) {
+        console.log('❌ Request with URL token failed:', error);
+      }
+      
+      // If that fails, try without Authorization header (like in Postman)
+      if (!response || !response.ok) {
       try {
         response = await fetchWithTimeout(`${API_BASE_URL}/add-ticket-note`, {
           method: 'POST',
@@ -481,6 +868,7 @@ export class ApiService {
         console.log('📡 Response without auth:', response.status);
       } catch (error) {
         console.log('❌ Request without auth failed:', error);
+        }
       }
       
       // If that fails, try with token as query parameter
@@ -557,8 +945,15 @@ export class ApiService {
         message: data.message,
         hasData: !!data.data,
         dataType: typeof data.data,
-        isSuccess: data.status === '1'
+        isSuccess: data.status === '1',
+        responseStatus: response.status,
+        responseOk: response.ok
       });
+      
+      // Log the actual error message if any
+      if (data.message) {
+        console.log('📝 API Message:', data.message);
+      }
 
       // Check for authentication errors
       if (data.status === '0' && (data.message === 'Bearer token not passed' || data.message === 'Invalid access token')) {
@@ -580,11 +975,16 @@ export class ApiService {
       // Check if the request was successful
       if (data.status === '1') {
         console.log('✅ API request successful!');
+        return { success: true, data, status: response.status };
       } else {
         console.log('⚠️ API request returned status:', data.status, 'with message:', data.message);
+        return { 
+          success: false, 
+          error: data.message || 'API request failed', 
+          data, 
+          status: response.status 
+        };
       }
-
-      return { success: response.ok, data, status: response.status };
     } catch (error: any) {
       console.error('Add ticket note API error:', error);
       
@@ -614,12 +1014,142 @@ export class ApiService {
         return { success: false, error: 'Authentication token not found' };
       }
 
-      const response = await fetchWithTimeout(`${API_BASE_URL}/ticket-notes/${ticketId}`, {
+      // Get the actual database ID from the ticket data
+      let databaseId = ticketId;
+      
+      console.log('🔍 Looking for database ID for notes ticket:', ticketId);
+      
+      try {
+        // Try to get the database ID from the tickets data
+        console.log('🔄 Fetching tickets to find database ID for notes...');
+        const ticketsResult = await this.getTickets(1, 100);
+        console.log('📡 Tickets fetch result for notes:', {
+          success: ticketsResult.success,
+          hasData: !!ticketsResult.data,
+          dataType: typeof ticketsResult.data,
+          isArray: Array.isArray(ticketsResult.data?.data)
+        });
+        
+        if (ticketsResult.success && ticketsResult.data && ticketsResult.data.data) {
+          const tickets = ticketsResult.data.data;
+          console.log('📋 Available tickets for notes lookup:', tickets.map((t: any) => ({
+            id: t.id,
+            ticket_number: t.ticket_number,
+            title: t.title
+          })));
+          
+          const matchingTicket = tickets.find((ticket: any) => 
+            ticket.ticket_number === ticketId || ticket.id === ticketId
+          );
+          
+          if (matchingTicket) {
+            databaseId = matchingTicket.id;
+            console.log('🔢 Found matching ticket for notes:', { 
+              ticketNumber: ticketId, 
+              databaseId: matchingTicket.id,
+              ticketData: matchingTicket
+            });
+          } else {
+            console.log('⚠️ No matching ticket found for notes:', ticketId);
+            console.log('🔍 Available ticket numbers:', tickets.map((t: any) => t.ticket_number));
+            console.log('🔍 Available ticket IDs:', tickets.map((t: any) => t.id));
+            
+            // Fallback: try to extract from ticket number
+            if (typeof ticketId === 'string' && !/^\d+$/.test(ticketId)) {
+              const match = ticketId.match(/\d+/);
+              if (match) {
+                databaseId = match[0];
+                console.log('🔢 Using extracted ID from ticket number for notes:', databaseId);
+              }
+            }
+          }
+        } else {
+          console.log('⚠️ Could not fetch tickets for notes ID lookup');
+          console.log('📡 Tickets result for notes:', ticketsResult);
+          
+          // Fallback: try to extract from ticket number
+          if (typeof ticketId === 'string' && !/^\d+$/.test(ticketId)) {
+            const match = ticketId.match(/\d+/);
+            if (match) {
+              databaseId = match[0];
+              console.log('🔢 Using extracted ID from ticket number for notes:', databaseId);
+            }
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ Error fetching tickets for notes ID lookup:', error);
+        
+        // Fallback: try to extract from ticket number
+        if (typeof ticketId === 'string' && !/^\d+$/.test(ticketId)) {
+          const match = ticketId.match(/\d+/);
+          if (match) {
+            databaseId = match[0];
+            console.log('🔢 Using extracted ID from ticket number for notes:', databaseId);
+          }
+        }
+      }
+      
+      console.log('🔢 Using database ID for notes:', { original: ticketId, databaseId });
+      
+      // Validate that we have a valid database ID
+      if (!databaseId || databaseId === '') {
+        console.error('❌ No valid database ID found for notes ticket:', ticketId);
+        return { success: false, error: 'No valid database ID found for ticket' };
+      }
+      
+      // Ensure database ID is numeric
+      if (!/^\d+$/.test(String(databaseId))) {
+        console.error('❌ Database ID is not numeric for notes:', databaseId);
+        return { success: false, error: 'Database ID must be numeric for notes endpoint' };
+      }
+
+      // Try different possible endpoints for getting notes
+      const possibleEndpoints = [
+        `${API_BASE_URL}/ticket-notes/${databaseId}`,
+        `${API_BASE_URL}/ticket-notes?support_tickets_id=${databaseId}`,
+        `${API_BASE_URL}/tickets/${databaseId}/notes`,
+        `${API_BASE_URL}/tickets/${databaseId}/comments`,
+        `${API_BASE_URL}/support-tickets-notes?support_tickets_id=${databaseId}`,
+        `${API_BASE_URL}/ticket-details?support_tickets_id=${databaseId}&include_notes=true`,
+        `${API_BASE_URL}/ticket-details?support_tickets_id=${databaseId}&with_notes=true`,
+        `${API_BASE_URL}/ticket-details?support_tickets_id=${databaseId}&notes=true`,
+        `${API_BASE_URL}/support-tickets/${databaseId}/notes`,
+        `${API_BASE_URL}/support-tickets/${databaseId}/comments`,
+        `${API_BASE_URL}/ticket-comments?support_tickets_id=${databaseId}`,
+        `${API_BASE_URL}/ticket-comments/${databaseId}`,
+        `${API_BASE_URL}/notes?support_tickets_id=${databaseId}`,
+        `${API_BASE_URL}/comments?support_tickets_id=${databaseId}`
+      ];
+      
+      let response;
+      let successfulEndpoint = null;
+      
+      for (const endpoint of possibleEndpoints) {
+        try {
+          console.log('🔍 Trying notes endpoint:', endpoint);
+          response = await fetchWithTimeout(endpoint, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
-      }, 10000);
+          }, 5000);
+          
+          if (response.ok) {
+            successfulEndpoint = endpoint;
+            console.log('✅ Found working notes endpoint:', endpoint);
+            break;
+          } else {
+            console.log('❌ Endpoint failed:', endpoint, 'Status:', response.status);
+          }
+        } catch (error) {
+          console.log('❌ Endpoint error:', endpoint, error);
+        }
+      }
+      
+      if (!response || !response.ok) {
+        console.log('❌ No working notes endpoint found');
+        return { success: false, error: 'No working notes endpoint found' };
+      }
 
       const contentType = response.headers.get('content-type');
       console.log('Get ticket notes response status:', response.status);
@@ -656,7 +1186,19 @@ export class ApiService {
         return { success: false, error: 'Authentication failed', authError: true };
       }
 
-      return { success: response.ok, data, status: response.status };
+      // Check if the request was successful
+      if (data.status === '1') {
+        console.log('✅ Get ticket notes API request successful!');
+        return { success: true, data, status: response.status };
+      } else {
+        console.log('⚠️ Get ticket notes API request returned status:', data.status, 'with message:', data.message);
+        return { 
+          success: false, 
+          error: data.message || 'Failed to fetch ticket notes', 
+          data, 
+          status: response.status 
+        };
+      }
     } catch (error: any) {
       console.error('Get ticket notes API error:', error);
       

@@ -266,7 +266,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
                 onChange={handleInputChange}
                 required
                 placeholder="Describe the issue in detail"
-                rows={4}
+                rows={3}
               />
             </div>
 

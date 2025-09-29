@@ -7,9 +7,10 @@ import './Header.css';
 
 interface HeaderProps {
   onLogout?: () => void;
+  onCreateTicket?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ onLogout, onCreateTicket }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -148,7 +149,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
         <div className="header-actions" onClick={(e) => e.stopPropagation()}>
           <button 
             className="create-ticket-btn" 
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => onCreateTicket ? onCreateTicket() : setShowCreateModal(true)}
             title="Create New Ticket"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -197,9 +198,6 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
         </div>
       </div>
       
-      {showCreateModal && (
-        <CreateTicketModal onClose={() => setShowCreateModal(false)} />
-      )}
     </header>
   );
 };

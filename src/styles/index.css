@@ -154,6 +154,16 @@ select {
   flex-direction: column;
 }
 
+/* Ensure modal is always on top */
+.modal-overlay {
+  z-index: 2147483647 !important;
+  position: fixed !important;
+}
+
+.modal-container {
+  z-index: 2147483646 !important;
+}
+
 .main-content {
   flex: 1;
   padding: 2rem;

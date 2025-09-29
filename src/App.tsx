@@ -3,10 +3,12 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login/Login';
 import Header from './components/Layout/Header';
 import TicketList from './pages/TicketList/TicketList';
+import CreateTicketModal from './components/CreateTicketModal/CreateTicketModal';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -92,13 +94,16 @@ function App() {
 
   return (
     <div className="app">
-      <Header onLogout={handleLogout} />
+      <Header onLogout={handleLogout} onCreateTicket={() => setShowCreateModal(true)} />
       <Routes>
         <Route path="/" element={<Navigate to="/tickets" replace />} />
         <Route path="/tickets" element={<TicketList />} />
         <Route path="*" element={<Navigate to="/tickets" replace />} />
       </Routes>
       
+      {showCreateModal && (
+        <CreateTicketModal onClose={() => setShowCreateModal(false)} />
+      )}
     </div>
   );
 }

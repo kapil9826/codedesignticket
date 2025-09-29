@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ApiService from '../../services/api';
+import { addCommentFoolproof } from '../../services/api-foolproof';
 import './TicketDetail.css';
 
 interface Ticket {
@@ -160,19 +161,85 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       
       console.log('🔍 Fetching ticket details for:', ticketId);
       
-      // Get the database ID for the API call
-      const ticketIdMapping: { [key: string]: string } = {
-        'CND1020': '21',
-        'CND1021': '22',
-        'CND1012': '13',
-        'CND1023': '24', // Add the new ticket ID mapping
-      };
+      // Dynamic database ID resolution for all tickets
+      let databaseId = ticketId;
       
-      const databaseId = ticketIdMapping[ticketId] || ticketId;
-      console.log('🔍 Using database ID:', databaseId, 'for ticket:', ticketId);
-      console.log('🔍 Ticket ID mapping:', ticketIdMapping);
+      console.log('🔍 Resolving database ID for ticket:', ticketId);
+      console.log('🔍 Ticket ID type:', typeof ticketId);
+      console.log('🔍 Is numeric check:', /^\d+$/.test(String(ticketId)));
       
-      // Fetch from the dedicated ticket details API
+      // If ticket ID is already numeric, use it directly
+      if (typeof ticketId === 'string' && /^\d+$/.test(ticketId)) {
+        console.log('🔢 Ticket ID is already numeric (database ID):', ticketId);
+        databaseId = ticketId;
+      } else {
+        console.log('🔍 Ticket ID is not numeric, need to find database ID from tickets list...');
+        
+        try {
+          // Fetch tickets to find the database ID
+          console.log('🔄 Fetching tickets to find database ID...');
+          const ticketsResult = await ApiService.getTickets(1, 1000);
+          
+          if (ticketsResult.success && ticketsResult.data && ticketsResult.data.data) {
+            let apiTickets = [];
+            if (Array.isArray(ticketsResult.data.data)) {
+              apiTickets = ticketsResult.data.data;
+            } else if (ticketsResult.data.data && typeof ticketsResult.data.data === 'object' && Array.isArray(ticketsResult.data.data.data)) {
+              apiTickets = ticketsResult.data.data.data;
+            }
+            
+            console.log('📋 Available tickets for ID lookup:', apiTickets.length);
+            
+            // Find the matching ticket
+            console.log('🔍 Searching for ticket in list...');
+            console.log('🔍 Looking for ticket ID:', ticketId);
+            console.log('🔍 Available tickets in list:', apiTickets.length);
+            
+            const matchingTicket = apiTickets.find((ticket: any) => {
+              const matchesTicketNumber = ticket.ticket_number === ticketId;
+              const matchesId = ticket.id === ticketId;
+              console.log('🔍 Checking ticket:', {
+                id: ticket.id,
+                ticket_number: ticket.ticket_number,
+                matchesTicketNumber,
+                matchesId,
+                target: ticketId
+              });
+              return matchesTicketNumber || matchesId;
+            });
+            
+            if (matchingTicket) {
+              databaseId = matchingTicket.id;
+              console.log('✅ Found matching ticket:', {
+                ticketNumber: ticketId,
+                databaseId: matchingTicket.id,
+                ticketData: matchingTicket
+              });
+              console.log('✅ Successfully resolved database ID from tickets list');
+            } else {
+              console.log('⚠️ No matching ticket found, using ticket ID as fallback');
+              console.log('🔍 Available ticket numbers:', apiTickets.map((t: any) => t.ticket_number));
+              console.log('🔍 Available ticket IDs:', apiTickets.map((t: any) => t.id));
+              
+              // Try to extract numeric part from ticket number
+              const match = ticketId.match(/\d+/);
+              if (match) {
+                databaseId = match[0];
+                console.log('🔢 Using extracted ID from ticket number:', databaseId);
+              }
+            }
+          } else {
+            console.log('⚠️ Could not fetch tickets for ID lookup, using ticket ID as fallback');
+          }
+        } catch (error) {
+          console.log('⚠️ Error fetching tickets for ID lookup:', error);
+        }
+      }
+      
+      console.log('🔢 Final database ID:', databaseId, 'for ticket:', ticketId);
+      
+      // Fetch from the original ticket details API
+      console.log('🔄 Using original ticket details approach...');
       const result = await ApiService.getTicketDetails(databaseId);
       
       if (result.success && result.data && result.data.status === '1') {
@@ -227,7 +294,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         console.log('✅ Transformed ticket data:', transformedTicket);
       } else {
         console.log('❌ Failed to fetch ticket details:', result.error);
-        setTicketError(result.error || 'Failed to load ticket details');
+          setTicketError(result.error || 'Failed to load ticket details');
       }
     } catch (error) {
       console.error('❌ Error fetching ticket details:', error);
@@ -512,115 +579,110 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
   };
 
   const handleAddComment = async () => {
-    if (newComment.trim() || selectedFiles.length > 0) {
-      try {
-        console.log('Adding comment to ticket:', ticketId);
-        console.log('Comment:', newComment);
-        console.log('Attachments:', selectedFiles.length);
+    console.log('🚀 ===== FOOLPROOF ADD COMMENT =====');
+    console.log('🔍 Input:', { ticketId, comment: newComment, files: selectedFiles.length });
+    
+    // Validate input
+    if (!newComment.trim() && selectedFiles.length === 0) {
+      alert('Please enter a comment or select a file to attach.');
+      return;
+    }
+    
+    try {
+      // Call the FOOLPROOF API
+      console.log('🔄 Calling foolproof API...');
+      const result = await addCommentFoolproof(ticketId, newComment.trim(), selectedFiles);
+      
+      if (result.success) {
+        console.log('✅ Comment added successfully!');
         
-        // Call the addTicketNote API with correct parameters
-        const result = await ApiService.addTicketNote(ticketId, newComment, selectedFiles);
-        
-        if (result.success) {
-          console.log('✅ Comment added successfully:', result.data);
-          
-          // Create comment object for local display
-          const commentAttachments = selectedFiles.map(file => ({
-            id: Date.now().toString() + Math.random(),
+        // Create local comment for immediate display
+        const localComment: Comment = {
+          id: `local_${Date.now()}`,
+          author: 'You',
+          message: newComment.trim(),
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isAgent: false,
+          attachments: selectedFiles.map(file => ({
+            id: `att_${Date.now()}`,
             name: file.name,
             size: `${(file.size / 1024 / 1024).toFixed(1)}MB`,
             type: file.type.split('/')[1] || 'file'
-          }));
-
-          const comment: Comment = {
-            id: Date.now().toString(),
-            author: 'You',
-            message: newComment,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isAgent: false,
-            attachments: commentAttachments
-          };
-          
-          // Add comment to local state
-          setComments([...comments, comment]);
-          setNewComment('');
-          setSelectedFiles([]);
-          if (fileInputRef) {
-            fileInputRef.value = '';
-          }
-          
-          console.log('✅ Comment added to local state');
-          
-          // Refresh notes from API to get the updated notes
-          setTimeout(async () => {
-            try {
-              console.log('🔄 Refreshing notes from API after adding comment...');
-              
-              // Get updated tickets data which includes the new notes
-              const result = await ApiService.getTickets(1, 100);
-              
-              if (result.success && result.data && result.data.status === '1' && result.data.data) {
-                let apiTickets = [];
-                if (Array.isArray(result.data.data)) {
-                  apiTickets = result.data.data;
-                } else if (result.data.data && typeof result.data.data === 'object' && Array.isArray(result.data.data.data)) {
-                  apiTickets = result.data.data.data;
-                }
-                
-                // Find the current ticket
-                const currentTicket = apiTickets.find((ticket: any) => 
-                  ticket.ticket_number === ticketId || ticket.id === ticketId
-                );
-                
-                if (currentTicket && currentTicket.notes && Array.isArray(currentTicket.notes)) {
-                  console.log('✅ Found updated notes:', currentTicket.notes);
-                  
-                  // Convert API notes to Comment format
-                  const apiComments: Comment[] = currentTicket.notes.map((note: any, index: number) => ({
-                    id: `api-note-${index}`,
-                    author: note.created_by || 'System',
-                    message: note.note,
-                    timestamp: note.created_at || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    isAgent: true,
-                    attachments: note.documents ? note.documents.map((doc: string, docIndex: number) => ({
-                      id: `doc-${index}-${docIndex}`,
-                      name: doc.split('/').pop() || 'Attachment',
-                      size: 'Unknown',
-                      type: doc.split('.').pop() || 'file',
-                      url: doc
-                    })) : []
-                  }));
-                  
-                  // Replace all comments with the updated API data
-                  setComments(apiComments);
-                  console.log('✅ Updated comments with fresh API data:', apiComments);
-                } else {
-                  console.log('⚠️ No notes found after refresh');
-                  setComments([]);
-                }
-              } else {
-                console.log('⚠️ Failed to refresh comments from API');
-                setComments([]);
-              }
-            } catch (error) {
-              console.error('❌ Error refreshing notes:', error);
-              setComments([]);
-            }
-          }, 2000); // Wait 2 seconds for the API to process
-        } else {
-          console.error('❌ Failed to add comment:', result.error);
-          alert(`Failed to add comment: ${result.error}`);
+          }))
+        };
+        
+        // Add to comments immediately
+        setComments(prev => [...prev, localComment]);
+        
+        // Clear form
+        setNewComment('');
+        setSelectedFiles([]);
+        if (fileInputRef) {
+          fileInputRef.value = '';
         }
-      } catch (error) {
-        console.error('❌ Error adding comment:', error);
-        alert('An error occurred while adding the comment. Please try again.');
+        
+        console.log('🎉 Comment added and displayed locally!');
+        
+        // Try to refresh from API after a delay
+        setTimeout(async () => {
+          try {
+            console.log('🔄 Refreshing from API...');
+            const ticketsResult = await ApiService.getTickets(1, 1000);
+            
+            if (ticketsResult.success && ticketsResult.data?.data) {
+              let tickets = [];
+              if (Array.isArray(ticketsResult.data.data)) {
+                tickets = ticketsResult.data.data;
+              } else if (ticketsResult.data.data && typeof ticketsResult.data.data === 'object' && Array.isArray(ticketsResult.data.data.data)) {
+                tickets = ticketsResult.data.data.data;
+              }
+              
+              const currentTicket = tickets.find((ticket: any) => 
+                ticket.id === ticketId || ticket.ticket_number === ticketId
+              );
+              
+              if (currentTicket && currentTicket.notes && Array.isArray(currentTicket.notes)) {
+                console.log('✅ Found notes in API:', currentTicket.notes.length);
+                
+                const apiComments: Comment[] = currentTicket.notes.map((note: any, index: number) => ({
+                  id: `api-note-${note.id || index}`,
+                  author: note.created_by || 'System',
+                  message: note.note,
+                  timestamp: note.created_at || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  isAgent: true,
+                  attachments: note.documents ? note.documents.map((doc: string, docIndex: number) => ({
+                    id: `doc-${index}-${docIndex}`,
+                    name: doc.split('/').pop() || 'Attachment',
+                    size: 'Unknown',
+                    type: doc.split('.').pop() || 'file',
+                    url: doc
+                  })) : []
+                }));
+                
+                setComments(apiComments);
+                console.log('✅ Comments updated from API - now showing as System');
+              }
+            }
+          } catch (error) {
+            console.log('⚠️ API refresh failed, but local comment is still visible');
+          }
+        }, 3000);
+        
+      } else {
+        console.log('❌ API call failed:', result.error);
+        alert(`Failed to add comment: ${result.error}`);
       }
+      
+    } catch (error) {
+      console.error('❌ Error adding comment:', error);
+      alert(`Error adding comment: ${error}`);
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+      console.log('🔍 Enter key pressed');
       handleAddComment();
     }
   };
@@ -736,7 +798,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                           {attachment.name}
                         </a>
                       ) : (
-                        <span className="attachment-name">{attachment.name}</span>
+                      <span className="attachment-name">{attachment.name}</span>
                       )}
                       <span className="attachment-size">({attachment.size})</span>
                     </div>
@@ -790,7 +852,16 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               <label htmlFor="file-input" className="attachment-btn">
                 📎 Attach Files
               </label>
-              <button className="add-comment-btn" onClick={handleAddComment}>
+              <button 
+                className="add-comment-btn" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('🔍 Button clicked');
+                  handleAddComment();
+                }}
+                type="button"
+              >
                 Add Comment
               </button>
             </div>
@@ -921,7 +992,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                     >
                       Download
                     </button>
-                  </div>
+                </div>
                 ))
               ) : (
                 <div className="no-attachments">
