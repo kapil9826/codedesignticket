@@ -27,6 +27,7 @@ interface Attachment {
   name: string;
   size: string;
   type: string;
+  url?: string;
 }
 
 interface Customer {
@@ -52,7 +53,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
   const [currentTicket, setCurrentTicket] = useState<any>(null);
   const [ticketLoading, setTicketLoading] = useState(true);
   const [ticketError, setTicketError] = useState<string>('');
-  const [showAttachments, setShowAttachments] = useState(false);
+  const [showAttachments, setShowAttachments] = useState(true);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileInputRef, setFileInputRef] = useState<HTMLInputElement | null>(null);
 
@@ -159,46 +160,74 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       
       console.log('🔍 Fetching ticket details for:', ticketId);
       
-      // First try to get from the tickets list we already have
-      const existingTicket = tickets.find(t => t.id === ticketId);
-      if (existingTicket) {
-        console.log('✅ Found ticket in existing list:', existingTicket);
-        setCurrentTicket(existingTicket);
-        setTicketLoading(false);
-        return;
-      }
+      // Get the database ID for the API call
+      const ticketIdMapping: { [key: string]: string } = {
+        'CND1020': '21',
+        'CND1021': '22',
+        'CND1012': '13',
+        'CND1023': '24', // Add the new ticket ID mapping
+      };
       
-      // If not found, try to fetch from API
-      const result = await ApiService.getTicketDetails(ticketId);
+      const databaseId = ticketIdMapping[ticketId] || ticketId;
+      console.log('🔍 Using database ID:', databaseId, 'for ticket:', ticketId);
+      console.log('🔍 Ticket ID mapping:', ticketIdMapping);
       
-      if (result.success && result.data) {
+      // Fetch from the dedicated ticket details API
+      const result = await ApiService.getTicketDetails(databaseId);
+      
+      if (result.success && result.data && result.data.status === '1') {
         console.log('✅ API ticket details:', result.data);
         
-        const ticketData = result.data.data || result.data;
+        const ticketData = result.data.data;
+        console.log('🔍 Raw ticket data from API:', ticketData);
+        console.log('🔍 User name from API:', ticketData.user_name);
+        console.log('🔍 User email from API:', ticketData.user_email);
+        
         const transformedTicket = {
           id: ticketData.ticket_number || ticketData.id || ticketId,
           title: ticketData.title || 'No title',
           description: ticketData.description || 'No description available',
-          status: ticketData.status || 'Active',
-          priority: ticketData.priority_name || ticketData.priority || 'Low',
+          status: 'Active', // Default status since API doesn't provide it yet
+          priority: ticketData.priority_name || 'Low',
+          priorityBgColor: ticketData.priority_bg_color || '#e2e8f0',
+          priorityTextColor: ticketData.priority_text_color || '#4a5568',
           lastUpdated: ticketData.updated_at || ticketData.created_at || new Date().toLocaleDateString(),
           createdAt: ticketData.created_at || new Date().toLocaleDateString(),
-          assignedTo: ticketData.assigned_to || 'Unassigned',
-          channel: ticketData.channel || 'Web',
-          userName: ticketData.user_name || 'Unknown User'
+          userName: ticketData.user_name || 'Unknown User',
+          userEmail: ticketData.user_email || 'No email',
+          userPhone: ticketData.user_phone || 'No phone',
+          documents: ticketData.documents || null,
+          notes: ticketData.notes || null
         };
+        
+        console.log('🔍 Documents from API:', ticketData.documents);
+        console.log('🔍 Documents type:', typeof ticketData.documents);
+        console.log('🔍 Documents length:', ticketData.documents ? ticketData.documents.length : 'null/undefined');
+        
+        // If no documents in main response, try to fetch them separately
+        if (!ticketData.documents || ticketData.documents.length === 0) {
+          console.log('🔍 No documents in main response, trying separate attachments API...');
+          try {
+            const attachmentsResult = await ApiService.getTicketAttachments(databaseId);
+            if (attachmentsResult.success && attachmentsResult.data) {
+              console.log('✅ Found attachments via separate API:', attachmentsResult.data);
+              transformedTicket.documents = attachmentsResult.data.data || attachmentsResult.data;
+            }
+          } catch (error) {
+            console.log('❌ Separate attachments API failed:', error);
+          }
+        }
+        
+        console.log('🔍 Transformed ticket data:', transformedTicket);
+        console.log('🔍 Final user name:', transformedTicket.userName);
+        console.log('🔍 Final user email:', transformedTicket.userEmail);
+        console.log('🔍 Final documents:', transformedTicket.documents);
         
         setCurrentTicket(transformedTicket);
         console.log('✅ Transformed ticket data:', transformedTicket);
       } else {
         console.log('❌ Failed to fetch ticket details:', result.error);
-        
-        // Check if it's an endpoint not found error
-        if (result.error && result.error.includes('endpoint not found')) {
-          setTicketError('⚠️ Ticket details API is not available yet. You can still view tickets in the list and sidebar.');
-        } else {
-          setTicketError(result.error || 'Failed to load ticket details');
-        }
+        setTicketError(result.error || 'Failed to load ticket details');
       }
     } catch (error) {
       console.error('❌ Error fetching ticket details:', error);
@@ -215,30 +244,8 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       console.log('🔍 Available tickets:', tickets.length);
       console.log('🔍 Ticket IDs:', tickets.map(t => t.id));
       
-      // First try to find the ticket in the sidebar data
-      const existingTicket = tickets.find(ticket => ticket.id === ticketId);
-      if (existingTicket) {
-        console.log('✅ Found ticket in sidebar:', existingTicket);
-        const transformedTicket = {
-          id: existingTicket.id,
-          title: existingTicket.issue,
-          description: 'Ticket details not available from API. This is a basic view with limited information.',
-          status: existingTicket.status,
-          priority: existingTicket.priority,
-          lastUpdated: new Date().toLocaleDateString(),
-          createdAt: new Date().toLocaleDateString(),
-          assignedTo: 'Unassigned',
-          channel: 'Web',
-          userName: 'Unknown User'
-        };
-        setCurrentTicket(transformedTicket);
-        setTicketLoading(false);
-        setTicketError(null); // Clear any previous errors
-        return;
-      }
-      
-      console.log('❌ Ticket not found in sidebar, trying API...');
-      // If not found in sidebar, try API
+      // Always try to fetch from API first for complete details
+      console.log('🔄 Fetching ticket details from API...');
       fetchTicketDetails(ticketId);
     } else {
       // No ticketId provided, create a basic fallback
@@ -258,7 +265,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       setCurrentTicket(fallbackTicket);
       setTicketLoading(false);
     }
-  }, [ticketId, tickets]);
+  }, [ticketId]);
 
   // Dynamic ticket data based on ticketId
   const getTicketData = (id: string) => {
@@ -386,219 +393,114 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
 
   const attachments = getAttachmentsData(ticketId);
 
-  const getCommentsData = (ticketId: string) => {
-    const commentsData: { [key: string]: Comment[] } = {
-      'TC-0004': [
-        {
-          id: '1',
-          author: 'Agent',
-          message: 'Hi David, I see you are having trouble logging into your account. Let me help you resolve this.',
-          timestamp: '7:00PM',
-          isAgent: true
-        },
-        {
-          id: '2',
-          author: 'User',
-          message: 'Yes, I keep getting an error message saying my credentials are incorrect.',
-          timestamp: '7:01PM',
-          isAgent: false
-        },
-        {
-          id: '3',
-          author: 'Agent',
-          message: 'Let me check your account status. Can you try resetting your password?',
-          timestamp: '7:02PM',
-          isAgent: true
-        },
-        {
-          id: '4',
-          author: 'User',
-          message: 'I already tried that, but I am not receiving the reset email.',
-          timestamp: '7:03PM',
-          isAgent: false
-        }
-      ],
-      'TC-0001': [
-        {
-          id: '1',
-          author: 'Agent',
-          message: 'Hello Emily! I understand you need additional storage space. Let me check your current plan.',
-          timestamp: '2:15PM',
-          isAgent: true
-        },
-        {
-          id: '2',
-          author: 'User',
-          message: 'Yes, I need more space for my business files. The current limit is not sufficient.',
-          timestamp: '2:16PM',
-          isAgent: false
-        },
-        {
-          id: '3',
-          author: 'Agent',
-          message: 'I can see you are on the Basic plan. Would you like to upgrade to the Professional plan?',
-          timestamp: '2:17PM',
-          isAgent: true
-        },
-        {
-          id: '4',
-          author: 'User',
-          message: 'Yes, that sounds good. What are the benefits of the Professional plan?',
-          timestamp: '2:18PM',
-          isAgent: false
-        },
-        {
-          id: '5',
-          author: 'Agent',
-          message: 'The Professional plan includes 100GB storage, priority support, and advanced features.',
-          timestamp: '2:19PM',
-          isAgent: true
-        }
-      ],
-      'TC-0003': [
-        {
-          id: '1',
-          author: 'Agent',
-          message: 'Hi! I see you are having trouble accessing your monthly report. Let me investigate this issue.',
-          timestamp: '9:30AM',
-          isAgent: true
-        },
-        {
-          id: '2',
-          author: 'User',
-          message: 'Thank you, I need this report urgently for my presentation tomorrow.',
-          timestamp: '9:31AM',
-          isAgent: false
-        },
-        {
-          id: '3',
-          author: 'Agent',
-          message: 'I understand the urgency. Let me check the report generation system.',
-          timestamp: '9:32AM',
-          isAgent: true
-        },
-        {
-          id: '4',
-          author: 'User',
-          message: 'I have attached the report template and a screenshot of the error.',
-          timestamp: '9:33AM',
-          isAgent: false,
-          attachments: [
-            { id: '1', name: 'Report template.xlsx', size: '3.2MB', type: 'xlsx' },
-            { id: '2', name: 'Screenshot.png', size: '850KB', type: 'png' }
-          ]
-        },
-        {
-          id: '5',
-          author: 'Agent',
-          message: 'Thank you for the attachments. I can see the issue now. Let me fix this for you.',
-          timestamp: '9:34AM',
-          isAgent: true
-        }
-      ],
-      'TC-0008': [
-        {
-          id: '1',
-          author: 'Agent',
-          message: 'Hello Guy, I see you are experiencing an unexpected app crash. Let me help you resolve this.',
-          timestamp: '8:10AM',
-          isAgent: true
-        },
-        {
-          id: '2',
-          author: 'User',
-          message: 'Yes, the app keeps crashing when I try to open the dashboard.',
-          timestamp: '8:11AM',
-          isAgent: false
-        },
-        {
-          id: '3',
-          author: 'Agent',
-          message: 'What device and browser are you using? This will help me identify the issue.',
-          timestamp: '8:12AM',
-          isAgent: true
-        },
-        {
-          id: '4',
-          author: 'User',
-          message: 'I am using Chrome on Windows 10. The crash happens every time I click on the dashboard.',
-          timestamp: '8:13AM',
-          isAgent: false
-        }
-      ],
-      'TC-0010': [
-        {
-          id: '1',
-          author: 'Agent',
-          message: 'Hi Jacob, I see there is an issue with your billing information. Let me help you correct this.',
-          timestamp: '7:30AM',
-          isAgent: true
-        },
-        {
-          id: '2',
-          author: 'User',
-          message: 'Yes, I noticed the billing amount is incorrect on my last invoice.',
-          timestamp: '7:31AM',
-          isAgent: false
-        },
-        {
-          id: '3',
-          author: 'Agent',
-          message: 'I can see the issue. There was a calculation error in the billing system. Let me fix this for you.',
-          timestamp: '7:32AM',
-          isAgent: true
-        },
-        {
-          id: '4',
-          author: 'User',
-          message: 'Thank you. When will I receive the corrected invoice?',
-          timestamp: '7:33AM',
-          isAgent: false
-        }
-      ],
-      'TC-0011': [
-        {
-          id: '1',
-          author: 'Agent',
-          message: 'Hello! I see you are still experiencing login issues. Let me investigate this further.',
-          timestamp: '7:16AM',
-          isAgent: true
-        },
-        {
-          id: '2',
-          author: 'User',
-          message: 'Yes, the password reset is not working. I am not receiving any emails.',
-          timestamp: '7:17AM',
-          isAgent: false
-        },
-        {
-          id: '3',
-          author: 'Agent',
-          message: 'Let me check your email settings and try a different approach.',
-          timestamp: '7:18AM',
-          isAgent: true
-        },
-        {
-          id: '4',
-          author: 'User',
-          message: 'I have attached a screenshot of the error message I am seeing.',
-          timestamp: '7:19AM',
-          isAgent: false,
-          attachments: [
-            { id: '1', name: 'Login error.png', size: '650KB', type: 'png' }
-          ]
-        }
-      ]
-    };
-    return commentsData[ticketId] || commentsData['TC-0004'];
-  };
 
   const [comments, setComments] = useState<Comment[]>([]);
+  const [statuses, setStatuses] = useState<any[]>([]);
+
+  // Helper function to get status styling
+  const getStatusStyling = (ticketStatus: string) => {
+    // First try exact match
+    let statusData = statuses.find(s => s.name === ticketStatus);
+    
+    // If no exact match, try common mappings
+    if (!statusData) {
+      if (ticketStatus === 'Active') {
+        statusData = statuses.find(s => s.name === 'Open');
+      } else if (ticketStatus === 'Closed') {
+        statusData = statuses.find(s => s.name === 'Closed');
+      }
+    }
+    
+    return {
+      backgroundColor: statusData?.bg_color || '#6b7280',
+      color: statusData?.text_color || '#ffffff'
+    };
+  };
+
+  // Fetch statuses
+  const fetchStatuses = async () => {
+    try {
+      console.log('Fetching ticket statuses...');
+      const result = await ApiService.getTicketStatuses();
+      
+      if (result.success && result.data && result.data.status === '1') {
+        console.log('✅ Statuses fetched successfully:', result.data);
+        setStatuses(result.data.data || []);
+      } else {
+        console.error('❌ Failed to fetch statuses:', result.error);
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching statuses:', error);
+    }
+  };
 
   // Initialize comments when ticketId changes
   React.useEffect(() => {
-    setComments(getCommentsData(ticketId));
+    // Only fetch real notes from the API, no mock data
+    const fetchRealNotes = async () => {
+      try {
+        console.log('🔍 Fetching real notes for ticket:', ticketId);
+        
+        // Get tickets data which includes notes
+        const result = await ApiService.getTickets(1, 100);
+        
+        if (result.success && result.data && result.data.status === '1' && result.data.data) {
+          console.log('✅ Tickets API response:', result.data);
+          
+          let apiTickets = [];
+          if (Array.isArray(result.data.data)) {
+            apiTickets = result.data.data;
+          } else if (result.data.data && typeof result.data.data === 'object' && Array.isArray(result.data.data.data)) {
+            apiTickets = result.data.data.data;
+          }
+          
+          // Find the current ticket
+          const currentTicket = apiTickets.find((ticket: any) => 
+            ticket.ticket_number === ticketId || ticket.id === ticketId
+          );
+          
+          if (currentTicket && currentTicket.notes && Array.isArray(currentTicket.notes)) {
+            console.log('✅ Found notes for ticket:', currentTicket.notes);
+            
+            // Convert API notes to Comment format
+            const apiComments: Comment[] = currentTicket.notes.map((note: any, index: number) => ({
+              id: `api-note-${index}`,
+              author: note.created_by || 'System',
+              message: note.note,
+              timestamp: note.created_at || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              isAgent: true,
+              attachments: note.documents ? note.documents.map((doc: string, docIndex: number) => ({
+                id: `doc-${index}-${docIndex}`,
+                name: doc.split('/').pop() || 'Attachment',
+                size: 'Unknown',
+                type: doc.split('.').pop() || 'file',
+                url: doc
+              })) : []
+            }));
+            
+            setComments(apiComments);
+            console.log('✅ Using real API notes:', apiComments);
+          } else {
+            console.log('⚠️ No notes found for this ticket');
+            setComments([]); // Show empty comments instead of mock data
+          }
+        } else {
+          console.log('⚠️ Failed to fetch tickets data');
+          setComments([]); // Show empty comments instead of mock data
+        }
+      } catch (error) {
+        console.error('❌ Error fetching real notes:', error);
+        setComments([]); // Show empty comments instead of mock data
+      }
+    };
+    
+    fetchRealNotes();
   }, [ticketId]);
+
+  // Fetch statuses when component mounts
+  React.useEffect(() => {
+    fetchStatuses();
+  }, []);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -609,28 +511,109 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (newComment.trim() || selectedFiles.length > 0) {
-      const commentAttachments = selectedFiles.map(file => ({
-        id: Date.now().toString() + Math.random(),
-        name: file.name,
-        size: `${(file.size / 1024 / 1024).toFixed(1)}MB`,
-        type: file.type.split('/')[1] || 'file'
-      }));
+      try {
+        console.log('Adding comment to ticket:', ticketId);
+        console.log('Comment:', newComment);
+        console.log('Attachments:', selectedFiles.length);
+        
+        // Call the addTicketNote API with correct parameters
+        const result = await ApiService.addTicketNote(ticketId, newComment, selectedFiles);
+        
+        if (result.success) {
+          console.log('✅ Comment added successfully:', result.data);
+          
+          // Create comment object for local display
+          const commentAttachments = selectedFiles.map(file => ({
+            id: Date.now().toString() + Math.random(),
+            name: file.name,
+            size: `${(file.size / 1024 / 1024).toFixed(1)}MB`,
+            type: file.type.split('/')[1] || 'file'
+          }));
 
-      const comment: Comment = {
-        id: Date.now().toString(),
-        author: 'You',
-        message: newComment,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isAgent: false,
-        attachments: commentAttachments
-      };
-      setComments([...comments, comment]);
-      setNewComment('');
-      setSelectedFiles([]);
-      if (fileInputRef) {
-        fileInputRef.value = '';
+          const comment: Comment = {
+            id: Date.now().toString(),
+            author: 'You',
+            message: newComment,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isAgent: false,
+            attachments: commentAttachments
+          };
+          
+          // Add comment to local state
+          setComments([...comments, comment]);
+          setNewComment('');
+          setSelectedFiles([]);
+          if (fileInputRef) {
+            fileInputRef.value = '';
+          }
+          
+          console.log('✅ Comment added to local state');
+          
+          // Refresh notes from API to get the updated notes
+          setTimeout(async () => {
+            try {
+              console.log('🔄 Refreshing notes from API after adding comment...');
+              
+              // Get updated tickets data which includes the new notes
+              const result = await ApiService.getTickets(1, 100);
+              
+              if (result.success && result.data && result.data.status === '1' && result.data.data) {
+                let apiTickets = [];
+                if (Array.isArray(result.data.data)) {
+                  apiTickets = result.data.data;
+                } else if (result.data.data && typeof result.data.data === 'object' && Array.isArray(result.data.data.data)) {
+                  apiTickets = result.data.data.data;
+                }
+                
+                // Find the current ticket
+                const currentTicket = apiTickets.find((ticket: any) => 
+                  ticket.ticket_number === ticketId || ticket.id === ticketId
+                );
+                
+                if (currentTicket && currentTicket.notes && Array.isArray(currentTicket.notes)) {
+                  console.log('✅ Found updated notes:', currentTicket.notes);
+                  
+                  // Convert API notes to Comment format
+                  const apiComments: Comment[] = currentTicket.notes.map((note: any, index: number) => ({
+                    id: `api-note-${index}`,
+                    author: note.created_by || 'System',
+                    message: note.note,
+                    timestamp: note.created_at || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    isAgent: true,
+                    attachments: note.documents ? note.documents.map((doc: string, docIndex: number) => ({
+                      id: `doc-${index}-${docIndex}`,
+                      name: doc.split('/').pop() || 'Attachment',
+                      size: 'Unknown',
+                      type: doc.split('.').pop() || 'file',
+                      url: doc
+                    })) : []
+                  }));
+                  
+                  // Replace all comments with the updated API data
+                  setComments(apiComments);
+                  console.log('✅ Updated comments with fresh API data:', apiComments);
+                } else {
+                  console.log('⚠️ No notes found after refresh');
+                  setComments([]);
+                }
+              } else {
+                console.log('⚠️ Failed to refresh comments from API');
+                setComments([]);
+              }
+            } catch (error) {
+              console.error('❌ Error refreshing notes:', error);
+              setComments([]);
+            }
+          }, 2000); // Wait 2 seconds for the API to process
+        } else {
+          console.error('❌ Failed to add comment:', result.error);
+          alert(`Failed to add comment: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('❌ Error adding comment:', error);
+        alert('An error occurred while adding the comment. Please try again.');
       }
     }
   };
@@ -711,7 +694,10 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               <div className={`sidebar-ticket-priority priority-${ticket.priority.toLowerCase()}`}>
                 {ticket.priority}
               </div>
-              <div className={`sidebar-ticket-status status-${ticket.status.toLowerCase().replace('-', '')}`}>
+              <div 
+                className={`sidebar-ticket-status status-${ticket.status.toLowerCase().replace('-', '')}`}
+                style={getStatusStyling(ticket.status)}
+              >
                 {ticket.status}
               </div>
             </div>
@@ -739,7 +725,19 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                   {comment.attachments.map((attachment) => (
                     <div key={attachment.id} className="comment-attachment">
                       <span className="attachment-icon">📎</span>
-                      <span className="attachment-name">{attachment.name}</span>
+                      {attachment.url ? (
+                        <a 
+                          href={attachment.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="attachment-link"
+                          style={{color: '#3b82f6', textDecoration: 'underline' }}
+                        >
+                          {attachment.name}
+                        </a>
+                      ) : (
+                        <span className="attachment-name">{attachment.name}</span>
+                      )}
                       <span className="attachment-size">({attachment.size})</span>
                     </div>
                   ))}
@@ -776,6 +774,9 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               onKeyPress={handleKeyPress}
               className="comment-textarea"
               rows={4}
+              data-gramm="false"
+              data-gramm_editor="false"
+              data-enable-grammarly="false"
             />
             <div className="comment-actions">
               <input
@@ -829,30 +830,67 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
           <div className="meta-item">
             <span className="meta-label">User Name:</span>
             <span className="meta-value">{ticket.userName || 'Unknown User'}</span>
+            {console.log('🔍 Displaying user name:', ticket.userName)}
+          </div>
+          
+          <div className="meta-item">
+            <span className="meta-label">User Email:</span>
+            <span className="meta-value">{ticket.userEmail || 'No email'}</span>
+            {console.log('🔍 Displaying user email:', ticket.userEmail)}
+          </div>
+          
+          <div className="meta-item">
+            <span className="meta-label">User Phone:</span>
+            <span className="meta-value">{ticket.userPhone || 'No phone'}</span>
+            {console.log('🔍 Displaying user phone:', ticket.userPhone)}
           </div>
           
           <div className="meta-item">
             <span className="meta-label">Status:</span>
             <div className="status-container">
               <span className="status-icon">●</span>
-              <span className="status-text">{ticket.status}</span>
+              <span 
+                className="status-text"
+                style={{
+                  ...getStatusStyling(ticket.status),
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600'
+                }}
+              >
+                {ticket.status}
+              </span>
             </div>
           </div>
           
           <div className="meta-item">
             <span className="meta-label">Priority:</span>
-            <span className="priority-badge">{ticket.priority}</span>
+            <span 
+              className="priority-badge"
+              style={{
+                backgroundColor: ticket.priorityBgColor || '#e2e8f0',
+                color: ticket.priorityTextColor || '#4a5568'
+              }}
+            >
+              {ticket.priority}
+            </span>
           </div>
           
           <div className="meta-item">
-            <span className="meta-label">Date:</span>
+            <span className="meta-label">Created:</span>
             <span className="meta-value">{ticket.createdAt}</span>
+          </div>
+          
+          <div className="meta-item">
+            <span className="meta-label">Updated:</span>
+            <span className="meta-value">{ticket.lastUpdated}</span>
           </div>
         </div>
 
         <div className="attachments-section">
           <div className="attachments-header">
-            <h3>Attachments ({ticket.attachments || 0})</h3>
+            <h3>Attachments ({ticket.documents ? ticket.documents.length : 0})</h3>
             <button 
               className="show-all-btn"
               onClick={() => setShowAttachments(!showAttachments)}
@@ -861,13 +899,30 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
             </button>
           </div>
           
+          
           {showAttachments && (
             <div className="attachments-list">
-              {ticket.attachments && ticket.attachments > 0 ? (
-                <div className="attachment-item">
-                  <span className="attachment-name">📎 {ticket.attachments} file{ticket.attachments !== 1 ? 's' : ''} attached</span>
-                  <button className="download-btn">View Files</button>
-                </div>
+              {ticket.documents && ticket.documents.length > 0 ? (
+                ticket.documents.map((doc: string, index: number) => (
+                  <div key={index} className="attachment-item">
+                    <span className="attachment-icon">📎</span>
+                    <a 
+                      href={doc} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="attachment-link"
+                      style={{ color: '#3b82f6', textDecoration: 'underline' }}
+                    >
+                      {doc.split('/').pop() || 'Attachment'}
+                    </a>
+                    <button 
+                      className="download-btn"
+                      onClick={() => window.open(doc, '_blank')}
+                    >
+                      Download
+                    </button>
+                  </div>
+                ))
               ) : (
                 <div className="no-attachments">
                   <span>No attachments available</span>
@@ -882,15 +937,28 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
           <div className="customer-details">
             <div className="customer-item">
               <span className="customer-label">Customer ID:</span>
-              <span className="customer-value">#{ticket.userName || 'Unknown'}</span>
+              <span className="customer-value">#{ticket.id}</span>
             </div>
             <div className="customer-item">
-              <span className="customer-label">Email:</span>
+              <span className="customer-label">Name:</span>
               <span className="customer-value">{ticket.userName || 'Unknown User'}</span>
             </div>
             <div className="customer-item">
+              <span className="customer-label">Email:</span>
+              <span className="customer-value">{ticket.userEmail || 'No email'}</span>
+            </div>
+            <div className="customer-item">
+              <span className="customer-label">Phone:</span>
+              <span className="customer-value">{ticket.userPhone || 'No phone'}</span>
+            </div>
+            <div className="customer-item">
               <span className="customer-label">Status:</span>
-              <span className="temperament-badge">{ticket.status}</span>
+              <span 
+                className="temperament-badge"
+                style={getStatusStyling(ticket.status)}
+              >
+                {ticket.status}
+              </span>
             </div>
           </div>
         </div>

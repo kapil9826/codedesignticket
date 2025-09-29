@@ -266,11 +266,15 @@ export class ApiService {
         return { success: false, error: 'No internet connection' };
       }
 
-      const userName = getUserName();
-      const response = await fetchWithTimeout(`${API_BASE_URL}/tickets/${ticketId}?user_name=${encodeURIComponent(userName)}`, {
+      console.log('🔍 Fetching ticket details for ID:', ticketId);
+      
+      // Use the correct endpoint for ticket details
+      const response = await fetchWithTimeout(`${API_BASE_URL}/ticket-details?&support_tickets_id=${ticketId}`, {
         method: 'GET',
         headers: createHeaders(),
       }, 10000);
+
+      console.log('🔍 Ticket details response status:', response.status);
 
       // Check if response is HTML (error page)
       const contentType = response.headers.get('content-type');
@@ -280,6 +284,16 @@ export class ApiService {
       }
 
       const data = await response.json();
+      console.log('🔍 Ticket details API response:', data);
+      console.log('🔍 Full API response structure:', JSON.stringify(data, null, 2));
+      
+      // Check if documents field exists and log its content
+      if (data.data) {
+        console.log('🔍 Documents field in API response:', data.data.documents);
+        console.log('🔍 Documents field type:', typeof data.data.documents);
+        console.log('🔍 Documents field length:', data.data.documents ? data.data.documents.length : 'null/undefined');
+      }
+      
       return { success: response.ok, data, status: response.status };
     } catch (error: any) {
       console.error('Get ticket details API error:', error);
@@ -291,6 +305,50 @@ export class ApiService {
       }
       
       return { success: false, error: 'Failed to fetch ticket details' };
+    }
+  }
+
+  // Get ticket attachments
+  static async getTicketAttachments(ticketId: string) {
+    try {
+      if (!isOnline()) {
+        return { success: false, error: 'No internet connection' };
+      }
+
+      console.log('🔍 Fetching ticket attachments for ID:', ticketId);
+      
+      // Try different possible endpoints for attachments
+      const possibleEndpoints = [
+        `${API_BASE_URL}/ticket-attachments?support_tickets_id=${ticketId}`,
+        `${API_BASE_URL}/ticket-documents?support_tickets_id=${ticketId}`,
+        `${API_BASE_URL}/attachments?ticket_id=${ticketId}`,
+        `${API_BASE_URL}/documents?ticket_id=${ticketId}`
+      ];
+      
+      for (const endpoint of possibleEndpoints) {
+        try {
+          console.log('🔍 Trying endpoint:', endpoint);
+          const response = await fetchWithTimeout(endpoint, {
+            method: 'GET',
+            headers: createHeaders(),
+          }, 5000);
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Found attachments endpoint:', endpoint, data);
+            return { success: true, data, endpoint };
+          }
+        } catch (error) {
+          console.log('❌ Endpoint failed:', endpoint, error);
+          continue;
+        }
+      }
+      
+      console.log('❌ No working attachments endpoint found');
+      return { success: false, error: 'No attachments endpoint found' };
+    } catch (error: any) {
+      console.error('Get ticket attachments API error:', error);
+      return { success: false, error: 'Failed to fetch ticket attachments' };
     }
   }
 
@@ -326,6 +384,386 @@ export class ApiService {
     }
   }
 
+  // Add ticket note/comment with attachments using the new API endpoint
+  static async addTicketNote(ticketId: string, comment: string, attachments?: File[]) {
+    try {
+      if (!isOnline()) {
+        return { success: false, error: 'No internet connection' };
+      }
+
+      console.log('Adding ticket note...', {
+        support_tickets_id: ticketId,
+        note: comment.substring(0, 50) + '...',
+        attachments: attachments?.length || 0,
+        user_name: getUserName()
+      });
+
+      const formData = new FormData();
+      
+      // We need to use the database ID, not the ticket number
+      // For now, let's try to get the actual database ID from the ticket data
+      let databaseId = ticketId;
+      
+      // If we have a ticket number like "CND1020", we need to find the corresponding database ID
+      // This is a temporary solution - ideally we should store the database ID when loading tickets
+      console.log('🔍 Looking for database ID for ticket:', ticketId);
+      
+      // Try to get the database ID from localStorage or make an API call to find it
+      // For now, let's use a mapping approach
+      const ticketIdMapping: { [key: string]: string } = {
+        'CND1020': '21',
+        'CND1021': '22',
+        // Add more mappings as needed
+      };
+      
+      if (ticketIdMapping[ticketId]) {
+        databaseId = ticketIdMapping[ticketId];
+        console.log('🔢 Found database ID mapping:', { ticketNumber: ticketId, databaseId });
+      } else {
+        console.log('⚠️ No database ID mapping found for:', ticketId);
+        // Fallback: try to extract from ticket number or use as-is
+        if (typeof ticketId === 'string' && !/^\d+$/.test(ticketId)) {
+          const match = ticketId.match(/\d+/);
+          if (match) {
+            databaseId = match[0];
+          }
+        }
+      }
+      
+      console.log('🔢 Using database ID:', { original: ticketId, databaseId });
+      
+      // Use the correct field names from the working Postman request
+      formData.append('support_tickets_id', databaseId);
+      formData.append('note', comment);
+      formData.append('user_name', getUserName());
+      
+      // Add attachments if provided
+      if (attachments && attachments.length > 0) {
+        console.log('📎 Adding attachments:', attachments.length, 'files');
+        attachments.forEach((file, index) => {
+          formData.append('documents[]', file);
+          console.log(`📎 Added attachment ${index}:`, {
+            name: file.name,
+            size: file.size,
+            type: file.type
+          });
+        });
+      }
+
+      // Debug: Log FormData contents (simplified)
+      console.log('🔍 FormData contents:');
+      for (let [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          console.log(`  ${key}: File(${value.name})`);
+        } else {
+          console.log(`  ${key}: ${value}`);
+        }
+      }
+
+      // Get auth token
+      const token = getAuthToken();
+      if (!token) {
+        return { success: false, error: 'Authentication token not found' };
+      }
+
+      console.log('🔑 Using auth token:', token);
+      console.log('🌐 API URL:', `${API_BASE_URL}/add-ticket-note`);
+
+      // Try different authentication approaches
+      let response;
+      
+      // First try without Authorization header (like in Postman)
+      try {
+        response = await fetchWithTimeout(`${API_BASE_URL}/add-ticket-note`, {
+          method: 'POST',
+          body: formData,
+        }, 15000);
+        console.log('📡 Response without auth:', response.status);
+      } catch (error) {
+        console.log('❌ Request without auth failed:', error);
+      }
+      
+      // If that fails, try with token as query parameter
+      if (!response || !response.ok) {
+        console.log('🔄 Trying with token as query parameter...');
+        try {
+          response = await fetchWithTimeout(`${API_BASE_URL}/add-ticket-note?access_token=${token}`, {
+            method: 'POST',
+            body: formData,
+          }, 15000);
+          console.log('📡 Response with query token:', response.status);
+        } catch (error) {
+          console.log('❌ Request with query token failed:', error);
+        }
+      }
+      
+      // If still fails, try with Authorization header
+      if (!response || !response.ok) {
+        console.log('🔄 Trying with Authorization header...');
+        try {
+          response = await fetchWithTimeout(`${API_BASE_URL}/add-ticket-note`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+          }, 15000);
+          console.log('📡 Response with auth header:', response.status);
+        } catch (error) {
+          console.log('❌ Request with auth header failed:', error);
+        }
+      }
+
+      if (!response) {
+        console.log('❌ No response received from any authentication method');
+        return { success: false, error: 'No response received from server' };
+      }
+
+      console.log('📡 Response received:');
+      console.log('  Status:', response.status);
+      console.log('  Status Text:', response.statusText);
+      console.log('  Headers:', Object.fromEntries(response.headers.entries()));
+
+      console.log('Add ticket note response status:', response.status);
+      
+      const contentType = response.headers.get('content-type');
+      console.log('Response content type:', contentType);
+
+      let data;
+      try {
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const textResponse = await response.text();
+          console.log('Non-JSON response received:', textResponse.substring(0, 200) + '...');
+          return { 
+            success: false, 
+            error: `Server error (${response.status}): Received non-JSON response`,
+            status: response.status 
+          };
+        }
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        return { 
+          success: false, 
+          error: 'Failed to parse server response',
+          status: response.status 
+        };
+      }
+
+      console.log('📄 Full API response:', JSON.stringify(data, null, 2));
+      console.log('🔍 Response analysis:', {
+        status: data.status,
+        message: data.message,
+        hasData: !!data.data,
+        dataType: typeof data.data,
+        isSuccess: data.status === '1'
+      });
+
+      // Check for authentication errors
+      if (data.status === '0' && (data.message === 'Bearer token not passed' || data.message === 'Invalid access token')) {
+        console.log('❌ Authentication error in add ticket note API');
+        handleAuthError(false);
+        return { success: false, error: 'Authentication failed', authError: true };
+      }
+
+      // Check for validation errors
+      if (data.status === '0' && data.message === 'All fields required') {
+        console.log('❌ Validation error: All fields required');
+        return { 
+          success: false, 
+          error: 'All required fields must be provided (support_tickets_id, note, user_name)',
+          status: response.status 
+        };
+      }
+
+      // Check if the request was successful
+      if (data.status === '1') {
+        console.log('✅ API request successful!');
+      } else {
+        console.log('⚠️ API request returned status:', data.status, 'with message:', data.message);
+      }
+
+      return { success: response.ok, data, status: response.status };
+    } catch (error: any) {
+      console.error('Add ticket note API error:', error);
+      
+      if (error.message === 'Request timeout') {
+        return { success: false, error: 'Request timeout. Please try again.' };
+      }
+      
+      if (error.message.includes('Failed to fetch')) {
+        return { success: false, error: 'Connection failed. Please check your internet connection.' };
+      }
+      
+      return { success: false, error: 'Failed to add ticket note' };
+    }
+  }
+
+  // Get ticket notes/comments
+  static async getTicketNotes(ticketId: string) {
+    try {
+      if (!isOnline()) {
+        return { success: false, error: 'No internet connection' };
+      }
+
+      console.log('Fetching ticket notes for:', ticketId);
+
+      const token = getAuthToken();
+      if (!token) {
+        return { success: false, error: 'Authentication token not found' };
+      }
+
+      const response = await fetchWithTimeout(`${API_BASE_URL}/ticket-notes/${ticketId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      }, 10000);
+
+      const contentType = response.headers.get('content-type');
+      console.log('Get ticket notes response status:', response.status);
+      console.log('Response content type:', contentType);
+
+      let data;
+      try {
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const textResponse = await response.text();
+          console.log('Non-JSON response received:', textResponse.substring(0, 200) + '...');
+          return { 
+            success: false, 
+            error: `Server error (${response.status}): Received non-JSON response`,
+            status: response.status 
+          };
+        }
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        return { 
+          success: false, 
+          error: 'Failed to parse server response',
+          status: response.status 
+        };
+      }
+
+      console.log('Get ticket notes API response:', data);
+
+      // Check for authentication errors
+      if (data.status === '0' && (data.message === 'Bearer token not passed' || data.message === 'Invalid access token')) {
+        console.log('Authentication error in get ticket notes API');
+        handleAuthError(false);
+        return { success: false, error: 'Authentication failed', authError: true };
+      }
+
+      return { success: response.ok, data, status: response.status };
+    } catch (error: any) {
+      console.error('Get ticket notes API error:', error);
+      
+      if (error.message === 'Request timeout') {
+        return { success: false, error: 'Request timeout. Please try again.' };
+      }
+      
+      if (error.message.includes('Failed to fetch')) {
+        return { success: false, error: 'Connection failed. Please check your internet connection.' };
+      }
+      
+      return { success: false, error: 'Failed to fetch ticket notes' };
+    }
+  }
+
+  // Update ticket with notes directly
+  static async updateTicketNotes(ticketId: string, notes: string) {
+    try {
+      if (!isOnline()) {
+        return { success: false, error: 'No internet connection' };
+      }
+
+      console.log('Updating ticket notes directly for:', ticketId);
+
+      const token = getAuthToken();
+      if (!token) {
+        return { success: false, error: 'Authentication token not found' };
+      }
+
+      // Use database ID mapping
+      const ticketIdMapping: { [key: string]: string } = {
+        'CND1020': '21',
+        'CND1021': '22',
+      };
+      
+      let databaseId = ticketIdMapping[ticketId] || ticketId;
+      
+      const updateData = {
+        ticket_id: databaseId,
+        notes: notes,
+        user_name: getUserName()
+      };
+
+      console.log('🔍 Update data:', updateData);
+
+      const response = await fetchWithTimeout(`${API_BASE_URL}/update-ticket-notes`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      }, 15000);
+
+      console.log('Update ticket notes response status:', response.status);
+      
+      const contentType = response.headers.get('content-type');
+      console.log('Response content type:', contentType);
+
+      let data;
+      try {
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const textResponse = await response.text();
+          console.log('Non-JSON response received:', textResponse.substring(0, 200) + '...');
+          return { 
+            success: false, 
+            error: `Server error (${response.status}): Received non-JSON response`,
+            status: response.status 
+          };
+        }
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        return { 
+          success: false, 
+          error: 'Failed to parse server response',
+          status: response.status 
+        };
+      }
+
+      console.log('Update ticket notes API response:', data);
+
+      // Check for authentication errors
+      if (data.status === '0' && (data.message === 'Bearer token not passed' || data.message === 'Invalid access token')) {
+        console.log('Authentication error in update ticket notes API');
+        handleAuthError(false);
+        return { success: false, error: 'Authentication failed', authError: true };
+      }
+
+      return { success: response.ok, data, status: response.status };
+    } catch (error: any) {
+      console.error('Update ticket notes API error:', error);
+      
+      if (error.message === 'Request timeout') {
+        return { success: false, error: 'Request timeout. Please try again.' };
+      }
+      
+      if (error.message.includes('Failed to fetch')) {
+        return { success: false, error: 'Connection failed. Please check your internet connection.' };
+      }
+      
+      return { success: false, error: 'Failed to update ticket notes' };
+    }
+  }
+
+
   // Create new ticket
   static async createTicket(ticketData: any) {
     try {
@@ -334,6 +772,8 @@ export class ApiService {
       }
 
       console.log('Attempting to create ticket...');
+      console.log('Ticket data received:', ticketData);
+      console.log('Attachments:', ticketData.attachments);
       
       // Force token refresh if needed
       forceTokenRefresh();
@@ -341,47 +781,77 @@ export class ApiService {
       const userName = getUserName();
       console.log('User creating ticket:', userName);
       
-      const ticketDataWithUser = {
-        ...ticketData,
-        priority_name: ticketData.priority, // Add priority_name field
-        user_name: userName
-        // Removed access_token from payload to avoid CORS issues
-      };
+      // Check if we have attachments
+      const hasAttachments = ticketData.attachments && ticketData.attachments.length > 0;
+      console.log('Has attachments:', hasAttachments, ticketData.attachments?.length);
       
-      const simpleTicketData = {
-        title: ticketData.title,
-        description: ticketData.description,
-        priority: ticketData.priority,
-        channel: ticketData.channel || 'Web',
-        user_name: userName
-      };
-      
-      console.log('Sending ticket data (full):', ticketDataWithUser);
-      console.log('Sending ticket data (simple):', simpleTicketData);
-      console.log('🔍 Priority field being sent:', {
-        'ticketData.priority': ticketData.priority,
-        'ticketDataWithUser.priority': ticketDataWithUser.priority,
-        'priority type': typeof ticketData.priority,
-        'priority value': ticketData.priority
-      });
-      
-      console.log('🔑 Access token being sent:', {
-        'access_token': getAuthToken(),
-        'token type': typeof getAuthToken(),
-        'token length': getAuthToken()?.length || 0,
-        'URL with token': `${API_BASE_URL}/add-ticket?access_token=${getAuthToken()}`,
-        'Headers being sent': createHeaders(true)
-      });
-      
-      // Add token as query parameter to avoid CORS issues
+      // Prepare URL with token
       const token = getAuthToken();
       const url = `${API_BASE_URL}/add-ticket${token ? `?access_token=${encodeURIComponent(token)}` : ''}`;
       
-      const response = await fetchWithTimeout(url, {
-        method: 'POST',
-        headers: createHeaders(false), // No Authorization header to avoid CORS
-        body: JSON.stringify(ticketDataWithUser),
-      }, 15000);
+      let response;
+      
+      if (hasAttachments) {
+        // Use FormData for attachments
+        console.log('Using FormData for ticket with attachments');
+        const formData = new FormData();
+        
+        // Add basic ticket data
+        formData.append('title', ticketData.title);
+        formData.append('description', ticketData.description);
+        formData.append('priority', ticketData.priority);
+        formData.append('priority_name', ticketData.priority);
+        formData.append('channel', ticketData.channel || 'Web');
+        formData.append('user_name', userName);
+        
+        // Add attachments
+        ticketData.attachments.forEach((file: File, index: number) => {
+          console.log(`Adding attachment ${index}:`, file.name, file.size);
+          formData.append(`documents[]`, file);
+          formData.append(`documents[${index}]`, file);
+          formData.append(`attachment_${index}`, file);
+        });
+        
+        // Debug: Log FormData contents
+        console.log('🔍 FormData contents:');
+        for (let [key, value] of formData.entries()) {
+          if (value instanceof File) {
+            console.log(`  ${key}: File(${value.name}, ${value.size} bytes)`);
+          } else {
+            console.log(`  ${key}: ${value}`);
+          }
+        }
+        
+        response = await fetchWithTimeout(url, {
+          method: 'POST',
+          headers: {
+            // Don't set Content-Type for FormData, let browser set it with boundary
+          },
+          body: formData,
+        }, 15000);
+        
+      } else {
+        // Use JSON for tickets without attachments
+        console.log('Using JSON for ticket without attachments');
+        const ticketDataWithUser = {
+          title: ticketData.title,
+          description: ticketData.description,
+          priority: ticketData.priority,
+          priority_name: ticketData.priority,
+          channel: ticketData.channel || 'Web',
+          user_name: userName
+        };
+        
+        console.log('Sending ticket data (JSON):', ticketDataWithUser);
+        
+        response = await fetchWithTimeout(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(ticketDataWithUser),
+        }, 15000);
+      }
 
       const contentType = response.headers.get('content-type');
       console.log('Response content type:', contentType);
@@ -524,6 +994,36 @@ export class ApiService {
     } catch (error: any) {
       console.error('Get priorities API error:', error);
       return { success: false, error: 'Failed to fetch priorities' };
+    }
+  }
+
+  // Get ticket statuses
+  static async getTicketStatuses() {
+    try {
+      if (!isOnline()) {
+        return { success: false, error: 'No internet connection' };
+      }
+
+      console.log('Attempting to fetch ticket statuses...');
+      
+      const response = await fetchWithTimeout(`${API_BASE_URL}/support-tickets-status`, {
+        method: 'GET',
+        headers: createHeaders(),
+      }, 10000);
+
+      const data = await response.json();
+      console.log('Get Statuses API Response:', data);
+      
+      if (data.status === '0' && data.message === 'Invalid access token') {
+        console.log('Authentication error in statuses API');
+        handleAuthError(false);
+        return { success: false, error: 'Authentication failed', authError: true };
+      }
+      
+      return { success: response.ok, data, status: response.status };
+    } catch (error: any) {
+      console.error('Get statuses API error:', error);
+      return { success: false, error: 'Failed to fetch statuses' };
     }
   }
 

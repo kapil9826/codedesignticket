@@ -13,8 +13,23 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [userName, setUserName] = useState<string>('Admin');
+  // Initialize with user data from localStorage if available
+  const getInitialUserName = () => {
+    try {
+      const userData = localStorage.getItem('userData');
+      if (userData) {
+        const user = JSON.parse(userData);
+        return user.name || user.username || user.user_name || user.displayName || user.firstName || user.email || 'Admin';
+      }
+    } catch (error) {
+      console.error('Error reading initial user data:', error);
+    }
+    return 'Admin';
+  };
+
+  const [userName, setUserName] = useState<string>(getInitialUserName());
   const userMenuRef = useRef<HTMLDivElement>(null);
+
 
 
   useEffect(() => {
@@ -30,6 +45,23 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
     };
   }, []);
 
+  // Ensure user name is set correctly on mount
+  useEffect(() => {
+    const userData = localStorage.getItem('userData');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        const name = user.name || user.username || user.user_name || user.displayName || user.firstName || user.email || 'Admin';
+        if (name !== userName) {
+          console.log('🔍 Header: Updating userName from', userName, 'to', name);
+          setUserName(name);
+        }
+      } catch (error) {
+        console.error('Error parsing user data on mount:', error);
+      }
+    }
+  }, []);
+
   // Get user name from localStorage
   useEffect(() => {
     const getUserName = () => {
@@ -40,16 +72,6 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
         if (userData) {
           const user = JSON.parse(userData);
           console.log('🔍 Header: Parsed user object:', user);
-          console.log('🔍 Header: Available fields:', Object.keys(user));
-          console.log('🔍 Header: Field values:', {
-            name: user.name,
-            email: user.email,
-            username: user.username,
-            user_name: user.user_name,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            displayName: user.displayName
-          });
           
           const name = user.name || 
                       user.username || 
@@ -80,10 +102,18 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
       }
     };
     
+    // Listen for custom user data update event
+    const handleUserDataUpdate = () => {
+      console.log('🔍 Header: userData updated event received');
+      getUserName();
+    };
+    
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('userDataUpdated', handleUserDataUpdate);
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userDataUpdated', handleUserDataUpdate);
     };
   }, []);
 
@@ -127,6 +157,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
             </svg>
             Create Ticket
           </button>
+
 
           <div className="user-menu" ref={userMenuRef}>
             <button

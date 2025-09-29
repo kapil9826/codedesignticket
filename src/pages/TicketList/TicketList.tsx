@@ -32,7 +32,28 @@ const TicketList: React.FC = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [statuses, setStatuses] = useState<any[]>([]);
   const ticketsPerPage = 50;
+
+  // Helper function to get status styling
+  const getStatusStyling = (ticketStatus: string) => {
+    // First try exact match
+    let statusData = statuses.find(s => s.name === ticketStatus);
+    
+    // If no exact match, try common mappings
+    if (!statusData) {
+      if (ticketStatus === 'Active') {
+        statusData = statuses.find(s => s.name === 'Open');
+      } else if (ticketStatus === 'Closed') {
+        statusData = statuses.find(s => s.name === 'Closed');
+      }
+    }
+    
+    return {
+      backgroundColor: statusData?.bg_color || '#6b7280',
+      color: statusData?.text_color || '#ffffff'
+    };
+  };
 
   const statusOptions = [
     { value: 'all', label: 'All Status' },
@@ -45,6 +66,22 @@ const TicketList: React.FC = () => {
   ];
 
   // Fetch tickets from API with improved error handling
+  const fetchStatuses = async () => {
+    try {
+      console.log('Fetching ticket statuses...');
+      const result = await ApiService.getTicketStatuses();
+      
+      if (result.success && result.data && result.data.status === '1') {
+        console.log('✅ Statuses fetched successfully:', result.data);
+        setStatuses(result.data.data || []);
+      } else {
+        console.error('❌ Failed to fetch statuses:', result.error);
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching statuses:', error);
+    }
+  };
+
   const fetchTickets = async (isRetry: boolean = false) => {
     if (isRetry) {
       setIsRetrying(true);
@@ -81,72 +118,26 @@ const TicketList: React.FC = () => {
         });
         
         // Process API data directly
-        console.log('🔍 Debugging API data access:');
-        console.log('result.data:', result.data);
-        console.log('result.data.data:', result.data.data);
-        console.log('Array.isArray(result.data.data):', Array.isArray(result.data.data));
-        console.log('result.data.data.length:', result.data.data?.length);
         
         // Try multiple ways to access the data
         let apiTickets = [];
         if (Array.isArray(result.data.data)) {
           apiTickets = result.data.data;
-          console.log('✅ Using result.data.data directly');
         } else if (result.data.data && typeof result.data.data === 'object') {
-          console.log('⚠️ result.data.data is object, checking for array property...');
-          console.log('Object keys:', Object.keys(result.data.data));
           if (Array.isArray(result.data.data.data)) {
             apiTickets = result.data.data.data;
-            console.log('✅ Using result.data.data.data');
           }
         }
         
-        console.log('Final apiTickets:', apiTickets);
-        console.log('apiTickets.length:', apiTickets.length);
         
         if (apiTickets.length > 0) {
-          console.log('✅ API Data Processing:', {
-            totalTickets: apiTickets.length,
-            firstTicket: apiTickets[0],
-            allFields: Object.keys(apiTickets[0] || {}),
-            hasStatus: 'status' in (apiTickets[0] || {}),
-            hasPriority: 'priority_name' in (apiTickets[0] || {}),
-            hasTicketNumber: 'ticket_number' in (apiTickets[0] || {})
-          });
-          console.log('Processing API tickets...', `Found ${apiTickets.length} tickets`);
           const transformedTickets: Ticket[] = apiTickets.map((ticket: any, index: number) => {
-            console.log(`Processing ticket ${index + 1}:`, {
-              id: ticket.ticket_number,
-              title: ticket.title,
-              priority: ticket.priority_name,
-              priorityBg: ticket.priority_bg_color,
-              priorityText: ticket.priority_text_color,
-              status: ticket.status,
-              allFields: Object.keys(ticket),
-              fullTicket: ticket
-            });
             
-            // Debug priority mapping specifically
-            console.log(`🔍 Priority mapping for ticket ${ticket.ticket_number}:`, {
-              'ticket.priority_name': ticket.priority_name,
-              'ticket.priority': ticket.priority,
-              'ticket.priority_id': ticket.priority_id,
-              'ticket.priority_level': ticket.priority_level,
-              'ticket.priority_value': ticket.priority_value,
-              'All ticket keys': Object.keys(ticket),
-              'Priority-related fields': Object.keys(ticket).filter(key => key.toLowerCase().includes('priority'))
-            });
             // Check if we have a locally stored priority for this ticket
             const localPriorities = JSON.parse(localStorage.getItem('ticketPriorities') || '{}');
             const localPriority = localPriorities[ticket.ticket_number || ticket.id];
             
             const finalPriority = localPriority || ticket.priority_name || ticket.priority || 'Low';
-            console.log(`🎯 Final priority for ${ticket.ticket_number}:`, {
-              'ticket.priority_name': ticket.priority_name,
-              'ticket.priority': ticket.priority,
-              'localPriority': localPriority,
-              'finalPriority': finalPriority
-            });
             
             return {
               id: ticket.ticket_number || ticket.id || `TC-${ticket.id}`,
@@ -181,24 +172,11 @@ const TicketList: React.FC = () => {
             };
           });
           
-          console.log('✅ Transformed API Tickets:', {
-            count: transformedTickets.length,
-            sample: transformedTickets[0],
-            allIds: transformedTickets.map(t => t.id),
-            allPriorities: transformedTickets.map(t => t.priority),
-            allStatuses: transformedTickets.map(t => t.status)
-          });
+          
           
           // Add offline tickets to the list
           const offlineTickets = JSON.parse(localStorage.getItem('offlineTickets') || '[]');
           const offlineTransformedTickets = offlineTickets.map((ticket: any) => {
-            console.log('🔍 Processing offline ticket:', {
-              id: ticket.id,
-              title: ticket.title,
-              priority: ticket.priority,
-              priority_name: ticket.priority_name,
-              allTicketData: ticket
-            });
             
             const priority = ticket.priority || ticket.priority_name || 'Low';
             const getPriorityColors = (priority: string) => {
@@ -240,13 +218,8 @@ const TicketList: React.FC = () => {
           setLoading(false);
           setIsRetrying(false);
           
-          console.log('✅ Successfully loaded tickets:', {
-            count: transformedTickets.length,
-            tickets: transformedTickets.map(t => ({ id: t.id, title: t.issue, priority: t.priority }))
-          });
           return;
         } else {
-          console.log('❌ No tickets found in API response');
           setTickets([]);
           setTotalTickets(0);
           setTotalPages(1);
@@ -282,6 +255,11 @@ const TicketList: React.FC = () => {
     };
 
   // Load tickets on component mount and when page changes
+  // Fetch statuses when component mounts
+  useEffect(() => {
+    fetchStatuses();
+  }, []);
+
   useEffect(() => {
     fetchTickets();
   }, [currentPage]);
@@ -339,192 +317,159 @@ const TicketList: React.FC = () => {
     setSelectedTicket(null);
   };
 
-  // Manual priority override for testing
-  const overrideTicketPriority = (ticketId: string, priority: string) => {
-    const localPriorities = JSON.parse(localStorage.getItem('ticketPriorities') || '{}');
-    localPriorities[ticketId] = priority;
-    localStorage.setItem('ticketPriorities', JSON.stringify(localPriorities));
-    console.log('🔧 Manually set priority:', { ticketId, priority });
-    // Refresh the ticket list
-    fetchTickets();
-  };
 
   const handleRetry = () => {
     fetchTickets(true);
   };
 
-  const clearCachedData = () => {
-    console.log('🧹 Clearing cached data...');
-    localStorage.removeItem('offlineTickets');
-    localStorage.removeItem('ticketPriorities');
-    console.log('✅ Cached data cleared');
-    fetchTickets();
-  };
 
   return (
     <div className="ticket-list-container">
-      <div className="ticket-list-header">
-        <div className="ticket-count">Total ticket {totalTickets}</div>
-        <div className="header-controls">
-          <div className="status-filter">
-            <select 
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="status-dropdown"
-            >
-              {statusOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button onClick={clearCachedData} className="retry-btn" style={{ marginLeft: '10px', fontSize: '12px', padding: '4px 8px' }}>
-            Clear Cache
-          </button>
-        </div>
-      </div>
-      
-      {error && (
-        <div className="error-message">
-          ⚠️ {error}
-          {retryCount < 3 && (
-            <button onClick={handleRetry} className="retry-btn" disabled={isRetrying}>
-              {isRetrying ? 'Retrying...' : 'Retry'}
-            </button>
-          )}
-          <button onClick={clearCachedData} className="retry-btn" style={{ marginLeft: '10px' }}>
-            Clear Cache
-          </button>
-        </div>
-      )}
-      
-      {loading && (
-        <div className="loading-message">
-          🔄 Loading tickets...
-        </div>
-      )}
-      
-      <div className="search-container">
-        <div className="search-input-wrapper">
-          <span className="search-icon">🔍</span>
-          <input
-            type="text"
-            placeholder="Search tickets..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
-      </div>
-
-      <div className="tickets-table-container">
-        <table className="tickets-table">
-          <thead>
-            <tr>
-              <th className="sortable">Ticket ID</th>
-              <th className="sortable">Title</th>
-              <th className="sortable priority-header">Priority</th>
-              <th className="sortable status-header">Status</th>
-              <th className="sortable">Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTickets.map((ticket, index) => (
-              <tr 
-                key={`${ticket.id}-${index}`} 
-                className="ticket-row"
-                onClick={() => handleTicketClick(ticket.id)}
-              >
-                <td className="ticket-id-cell">
-                  {ticket.id}
-                  {ticket.isOffline && <span className="offline-indicator" title="Created offline"> 📱</span>}
-                  {ticket.priority === 'Low' && !ticket.isOffline && (
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        overrideTicketPriority(ticket.id, 'High');
-                      }}
-                      style={{ 
-                        marginLeft: '5px', 
-                        fontSize: '10px', 
-                        padding: '2px 4px',
-                        background: '#f59e0b',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '3px',
-                        cursor: 'pointer'
-                      }}
-                      title="Set to High priority"
-                    >
-                      Fix
-                    </button>
-                  )}
-                </td>
-                <td className="ticket-subject-cell">{ticket.issue}</td>
-                <td className="priority-cell">
-                  <span 
-                    className={`priority-badge priority-${ticket.priority.toLowerCase()}`}
-                    style={{
-                      backgroundColor: ticket.priorityBgColor || '#e2e8f0',
-                      color: ticket.priorityTextColor || '#4a5568'
-                    }}
-                  >
-                    {ticket.priority}
-                  </span>
-                </td>
-                <td className="status-cell">
-                  <span className={`status-badge status-${ticket.status.toLowerCase().replace('-', '')}`}>
-                    {ticket.status}
-                  </span>
-                </td>
-                <td className="date-cell">{ticket.createdAt || ticket.time}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="pagination">
-          <div className="pagination-info">
-            Page {currentPage} of {totalPages}
-          </div>
-          <div className="pagination-controls">
-            <div className="pagination-pages">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => handlePageChange(pageNum)}
-                    className={`pagination-page ${currentPage === pageNum ? 'active' : ''}`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-              {totalPages > 5 && (
-                <>
-                  <span>...</span>
-                  <button
-                    onClick={() => handlePageChange(totalPages)}
-                    className={`pagination-page ${currentPage === totalPages ? 'active' : ''}`}
-                  >
-                    {totalPages}
-                  </button>
-                </>
-              )}
+      {!selectedTicket && (
+        <>
+          <div className="ticket-list-header">
+            <div className="ticket-count">Total ticket {totalTickets}</div>
+            <div className="header-controls">
+              <div className="status-filter">
+                <select 
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="status-dropdown"
+                >
+                  {statusOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="pagination-btn"
-            >
-              &gt;
-            </button>
           </div>
-        </div>
+          
+          {error && (
+            <div className="error-message">
+              ⚠️ {error}
+              {retryCount < 3 && (
+                <button onClick={handleRetry} className="retry-btn" disabled={isRetrying}>
+                  {isRetrying ? 'Retrying...' : 'Retry'}
+                </button>
+              )}
+              <button onClick={clearCachedData} className="retry-btn" style={{ marginLeft: '10px' }}>
+                Clear Cache
+              </button>
+            </div>
+          )}
+          
+          {loading && (
+            <div className="loading-message">
+              🔄 Loading tickets...
+            </div>
+          )}
+          
+          <div className="search-container">
+            <div className="search-input-wrapper">
+              <span className="search-icon">🔍</span>
+              <input
+                type="text"
+                placeholder="Search tickets..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+              />
+            </div>
+          </div>
+
+          <div className="tickets-table-container">
+            <table className="tickets-table">
+              <thead>
+                <tr>
+                  <th className="sortable">Ticket ID</th>
+                  <th className="sortable">Title</th>
+                  <th className="sortable priority-header">Priority</th>
+                  <th className="sortable status-header">Status</th>
+                  <th className="sortable">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTickets.map((ticket, index) => (
+                  <tr 
+                    key={`${ticket.id}-${index}`} 
+                    className="ticket-row"
+                    onClick={() => handleTicketClick(ticket.id)}
+                  >
+                    <td className="ticket-id-cell">
+                      {ticket.id}
+                      {ticket.isOffline && <span className="offline-indicator" title="Created offline"> 📱</span>}
+                    </td>
+                    <td className="ticket-subject-cell">{ticket.issue}</td>
+                    <td className="priority-cell">
+                      <span 
+                        className={`priority-badge priority-${ticket.priority.toLowerCase()}`}
+                        style={{
+                          backgroundColor: ticket.priorityBgColor || '#e2e8f0',
+                          color: ticket.priorityTextColor || '#4a5568'
+                        }}
+                      >
+                        {ticket.priority}
+                      </span>
+                    </td>
+                    <td className="status-cell">
+                      <span 
+                        className={`status-badge status-${ticket.status.toLowerCase().replace('-', '')}`}
+                        style={getStatusStyling(ticket.status)}
+                      >
+                        {ticket.status}
+                      </span>
+                    </td>
+                    <td className="date-cell">{ticket.createdAt || ticket.time}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="pagination">
+              <div className="pagination-info">
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className="pagination-controls">
+                <div className="pagination-pages">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`pagination-page ${currentPage === pageNum ? 'active' : ''}`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  {totalPages > 5 && (
+                    <>
+                      <span>...</span>
+                      <button
+                        onClick={() => handlePageChange(totalPages)}
+                        className={`pagination-page ${currentPage === totalPages ? 'active' : ''}`}
+                      >
+                        {totalPages}
+                      </button>
+                    </>
+                  )}
+                </div>
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="pagination-btn"
+                >
+                  &gt;
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
       
       {selectedTicket && (

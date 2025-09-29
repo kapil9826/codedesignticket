@@ -345,13 +345,13 @@
 }
 
 .login-button {
-  width: 120px;
-  padding: 6px 12px;
+  width: 100px;
+  padding: 4px 8px;
   background: linear-gradient(135deg, #122a37 0%, #48cfd5 100%);
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 0.625rem;
+  font-size: 0.5rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -393,8 +393,8 @@
   opacity: 0.7;
   cursor: not-allowed;
   transform: none !important;
-  padding: 6px 12px !important;
-  width: 120px !important;
+  padding: 4px 8px !important;
+  width: 100px !important;
   height: auto !important;
   min-height: 24px !important;
   max-height: 24px !important;
@@ -404,8 +404,8 @@
   outline: none;
   transform: translateY(-1px);
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-  padding: 6px 12px !important;
-  width: 120px !important;
+  padding: 4px 8px !important;
+  width: 100px !important;
   height: auto !important;
   min-height: 24px !important;
   max-height: 24px !important;
@@ -414,8 +414,8 @@
 .login-button:active {
   transform: translateY(0px) !important;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
-  padding: 6px 12px !important;
-  width: 120px !important;
+  padding: 4px 8px !important;
+  width: 100px !important;
   height: auto !important;
   min-height: 24px !important;
   max-height: 24px !important;
@@ -437,8 +437,8 @@
 
 /* Prevent size changes during loading */
 .login-button.loading {
-  padding: 6px 12px !important;
-  width: 120px !important;
+  padding: 4px 8px !important;
+  width: 100px !important;
   height: auto !important;
   min-height: 24px !important;
   max-height: 24px !important;
@@ -447,8 +447,8 @@
 }
 
 .login-button[disabled] {
-  padding: 6px 12px !important;
-  width: 120px !important;
+  padding: 4px 8px !important;
+  width: 100px !important;
   height: auto !important;
   min-height: 24px !important;
   max-height: 24px !important;
@@ -514,14 +514,128 @@
   }
   
   .login-button {
-    padding: 4px 8px;
-    font-size: 0.5rem;
-    width: 100px;
-    min-height: 20px;
+    padding: 3px 6px;
+    font-size: 0.4rem;
+    width: 80px;
+    min-height: 18px;
   }
   
   .logo-image {
     width: 64px;
     height: 64px;
+  }
+}
+
+/* Enhanced Responsive Design for All Devices */
+
+/* Large Desktop (1200px and up) */
+@media (min-width: 1200px) {
+  .login-background {
+    max-width: 450px;
+    padding: 2rem;
+  }
+  
+  .login-title {
+    font-size: 2rem;
+  }
+  
+  .login-input {
+    padding: 1rem;
+    font-size: 1rem;
+  }
+  
+  .login-button {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.75rem;
+    width: 120px;
+  }
+  
+  .logo-image {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+/* Desktop (992px to 1199px) */
+@media (min-width: 992px) and (max-width: 1199px) {
+  .login-background {
+    max-width: 400px;
+    padding: 1.5rem;
+  }
+  
+  .login-title {
+    font-size: 1.75rem;
+  }
+  
+  .login-input {
+    padding: 0.875rem;
+    font-size: 0.875rem;
+  }
+  
+  .login-button {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.625rem;
+    width: 110px;
+  }
+  
+  .logo-image {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+/* Tablet (768px to 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+  .login-background {
+    max-width: 350px;
+    padding: 1.25rem;
+  }
+  
+  .login-title {
+    font-size: 1.5rem;
+  }
+  
+  .login-input {
+    padding: 0.75rem;
+    font-size: 0.75rem;
+  }
+  
+  .login-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.5rem;
+    width: 100px;
+  }
+  
+  .logo-image {
+    width: 90px;
+    height: 90px;
+  }
+}
+
+/* Mobile Large (481px to 767px) */
+@media (min-width: 481px) and (max-width: 767px) {
+  .login-background {
+    max-width: 320px;
+    padding: 1rem;
+  }
+  
+  .login-title {
+    font-size: 1.25rem;
+  }
+  
+  .login-input {
+    padding: 0.625rem;
+    font-size: 0.625rem;
+  }
+  
+  .login-button {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.4rem;
+    width: 90px;
+  }
+  
+  .logo-image {
+    width: 80px;
+    height: 80px;
   }
 }

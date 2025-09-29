@@ -124,3 +124,4 @@ If your app uses environment variables:
 - You can disable auto-deployments in project settings
 
 Your Ticket Management app is now live on Vercel! 🎉
+

@@ -94,6 +94,15 @@ const Login: React.FC = () => {
         // Store user data if provided
         let userDataToStore = null;
         
+        console.log('🔍 Full API response structure:', {
+          status: result.data.status,
+          message: result.data.message,
+          data: result.data.data,
+          hasUser: !!result.data.user,
+          hasName: !!result.data.name,
+          hasEmail: !!result.data.email
+        });
+        
         if (result.data.user) {
           console.log('🔍 Using result.data.user:', result.data.user);
           userDataToStore = result.data.user;
@@ -111,13 +120,29 @@ const Login: React.FC = () => {
           localStorage.setItem('userData', JSON.stringify(userDataToStore));
           console.log('✅ Stored userData:', userDataToStore);
         } else {
-          console.log('❌ No user data found in API response');
+          // Fallback: Check if the entire result.data contains user info
+          console.log('🔍 No user data found in expected structure, checking full response...');
+          if (result.data && typeof result.data === 'object') {
+            const fallbackUserData = {
+              name: result.data.name || 'User',
+              email: result.data.email || '',
+              id: result.data.id || '',
+              username: result.data.username || result.data.name || 'User'
+            };
+            localStorage.setItem('userData', JSON.stringify(fallbackUserData));
+            console.log('✅ Stored fallback userData:', fallbackUserData);
+          } else {
+            console.log('❌ No user data found in API response');
+          }
         }
 
         console.log('Login successful:', result.data);
 
         // Dispatch custom event to notify App component
         window.dispatchEvent(new CustomEvent('authChange'));
+        
+        // Dispatch custom event to notify Header component
+        window.dispatchEvent(new CustomEvent('userDataUpdated'));
 
         // Force a page reload to ensure authentication state is properly updated
         window.location.href = '/tickets';

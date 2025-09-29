@@ -160,10 +160,10 @@ select {
   background: #ffffff;
   margin-left: 400px;
   max-width: calc(100vw - 400px);
-  min-height: calc(100vh - 60px);
-  margin-top: 60px;
+  min-height: calc(100vh - 50px);
+  margin-top: 50px;
   position: relative;
-  z-index: 50;
+  z-index: 1;
 }
 
 .main-content h1 {
@@ -178,10 +178,69 @@ select {
   color: #4a5568;
 }
 
-@media (max-width: 768px) {
+/* Responsive Design for All Devices */
+
+/* Large Desktop (1200px and up) */
+@media (min-width: 1200px) {
   .main-content {
+    max-width: 100%;
+    width: 100%;
+    margin-top: 50px;
     margin-left: 0;
-    margin-top: 0;
-    max-width: 100vw;
+    margin-right: 0;
+    margin-bottom: 0;
+    padding: 2rem;
+  }
+}
+
+/* Desktop (992px to 1199px) */
+@media (min-width: 992px) and (max-width: 1199px) {
+  .main-content {
+    max-width: 100%;
+    width: 100%;
+    margin-top: 50px;
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 0;
+    padding: 1.5rem;
+  }
+}
+
+/* Tablet (768px to 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+  .main-content {
+    margin-top: 50px;
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 0;
+    max-width: 100%;
+    width: 100%;
+    padding: 1rem;
+  }
+}
+
+/* Mobile Large (481px to 767px) */
+@media (min-width: 481px) and (max-width: 767px) {
+  .main-content {
+    margin-top: 50px;
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 0;
+    max-width: 100%;
+    width: 100%;
+    padding: 0.75rem;
+  }
+}
+
+/* Mobile Small (320px to 480px) */
+@media (max-width: 480px) {
+  .main-content {
+    margin-top: 50px;
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 0;
+    max-width: 100%;
+    width: 100%;
+    padding: 0.5rem;
   }
 }
