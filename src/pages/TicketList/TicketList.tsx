@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import TicketDetail from '../TicketDetail/TicketDetail';
+import SkeletonLoader from '../../components/SkeletonLoader/SkeletonLoader';
 import ApiService from '../../services/api';
 import './TicketList.css';
 
@@ -390,8 +391,8 @@ const TicketList: React.FC = () => {
           )}
           
           {loading && (
-            <div className="loading-message">
-              🔄 Loading tickets...
+            <div className="loading-container">
+              <SkeletonLoader type="ticket-list" count={5} />
             </div>
           )}
           

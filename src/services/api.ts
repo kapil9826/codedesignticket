@@ -1,5 +1,46 @@
 const API_BASE_URL = 'https://portal.bluemiledigital.in/apis';
 
+// Cache for API responses
+const cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+const CACHE_TTL = 30000; // 30 seconds cache
+
+// Cache helper functions
+const getCacheKey = (endpoint: string, params: any = {}) => {
+  return `${endpoint}_${JSON.stringify(params)}`;
+};
+
+const getCachedData = (key: string) => {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < cached.ttl) {
+    console.log('🚀 Using cached data for:', key);
+    return cached.data;
+  }
+  if (cached) {
+    cache.delete(key);
+  }
+  return null;
+};
+
+const setCachedData = (key: string, data: any, ttl: number = CACHE_TTL) => {
+  cache.set(key, { data, timestamp: Date.now(), ttl });
+  console.log('💾 Cached data for:', key);
+};
+
+// Clear cache function
+const clearCache = (pattern?: string) => {
+  if (pattern) {
+    for (const [key] of cache) {
+      if (key.includes(pattern)) {
+        cache.delete(key);
+      }
+    }
+    console.log('🗑️ Cleared cache for pattern:', pattern);
+  } else {
+    cache.clear();
+    console.log('🗑️ Cleared all cache');
+  }
+};
+
 // Get auth token from localStorage
 const getAuthToken = (): string | null => {
   const token = localStorage.getItem('authToken');
@@ -199,15 +240,24 @@ export class ApiService {
     }
   }
 
-  // Get tickets list with retry mechanism
-  static async getTickets(page: number = 1, perPage: number = 10) {
+  // Get tickets list with caching and retry mechanism
+  static async getTickets(page: number = 1, perPage: number = 10, useCache: boolean = true) {
     try {
+      // Check cache first
+      if (useCache) {
+        const cacheKey = getCacheKey('tickets', { page, perPage, user: getUserName() });
+        const cachedData = getCachedData(cacheKey);
+        if (cachedData) {
+          return cachedData;
+        }
+      }
+
       if (!isOnline()) {
         console.log('No internet connection, using mock data');
         return { success: false, error: 'No internet connection', useMockData: true };
       }
 
-      console.log('Fetching tickets from API...');
+      console.log('🚀 Fetching tickets from API...');
       console.log('Current token:', getAuthToken());
       console.log('Requesting page:', page, 'per page:', perPage);
       
@@ -218,7 +268,7 @@ export class ApiService {
         const response = await fetchWithTimeout(`${API_BASE_URL}/tickets?page=${page}&per_page=${perPage}&limit=100&user_name=${encodeURIComponent(userName)}`, {
           method: 'GET',
           headers: createHeaders(),
-        }, 15000);
+        }, 10000); // Reduced timeout from 15s to 10s
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -226,15 +276,6 @@ export class ApiService {
 
         const data = await response.json();
         console.log('Get Tickets API Response:', data);
-        console.log('🔍 API Response Analysis:', {
-          status: data.status,
-          message: data.message,
-          hasData: !!data.data,
-          dataType: typeof data.data,
-          isArray: Array.isArray(data.data),
-          dataLength: Array.isArray(data.data) ? data.data.length : 'N/A',
-          firstItem: Array.isArray(data.data) && data.data.length > 0 ? data.data[0] : null
-        });
         
         // Check for authentication errors
         if (data.status === '0' && (data.message === 'Bearer token not passed' || data.message === 'Invalid access token')) {
@@ -243,10 +284,18 @@ export class ApiService {
           return { success: false, error: 'Authentication failed', authError: true };
         }
         
-        return { success: response.ok, data, status: response.status };
+        const result = { success: response.ok, data, status: response.status };
+        
+        // Cache successful responses
+        if (result.success && useCache) {
+          const cacheKey = getCacheKey('tickets', { page, perPage, user: userName });
+          setCachedData(cacheKey, result, CACHE_TTL);
+        }
+        
+        return result;
       };
 
-      return await retryRequest(requestFn, 3, 2000);
+      return await retryRequest(requestFn, 2, 1500); // Reduced retries and delay
     } catch (error: any) {
       console.error('Get tickets API error:', error);
       if (error.message === 'Request timeout') {
@@ -259,16 +308,23 @@ export class ApiService {
     }
   }
 
-  // Get ticket details
-  static async getTicketDetails(ticketId: string) {
+  // Get ticket details with caching
+  static async getTicketDetails(ticketId: string, useCache: boolean = true) {
     try {
+      // Check cache first
+      if (useCache) {
+        const cacheKey = getCacheKey('ticket-details', { ticketId });
+        const cachedData = getCachedData(cacheKey);
+        if (cachedData) {
+          return cachedData;
+        }
+      }
+
       if (!isOnline()) {
         return { success: false, error: 'No internet connection' };
       }
 
-      console.log('🔍 Fetching ticket details for ID:', ticketId);
-      console.log('🔍 Ticket ID type:', typeof ticketId);
-      console.log('🔍 Ticket ID value:', ticketId);
+      console.log('🚀 Fetching ticket details for ID:', ticketId);
       
       // Get the actual database ID from the ticket data
       let databaseId = ticketId;
@@ -471,7 +527,15 @@ export class ApiService {
       // For now, we'll trust the API response since it's working correctly
       console.log('✅ Using notes directly from ticket details API response');
       
-      return { success: response.ok, data, status: response.status };
+      const result = { success: response.ok, data, status: response.status };
+      
+      // Cache successful responses
+      if (result.success && useCache) {
+        const cacheKey = getCacheKey('ticket-details', { ticketId });
+        setCachedData(cacheKey, result, CACHE_TTL);
+      }
+      
+      return result;
     } catch (error: any) {
       console.error('Get ticket details API error:', error);
       
@@ -1569,6 +1633,11 @@ export class ApiService {
     }
   }
 
+  // Clear cache method
+  static clearCache(pattern?: string) {
+    clearCache(pattern);
+  }
+
   // Logout
   static async logout() {
     try {
@@ -1583,12 +1652,19 @@ export class ApiService {
         localStorage.removeItem('authToken');
         localStorage.removeItem('userData');
 
+        // Clear API cache
+        clearCache();
+
         return { success: true };
       } else {
         // Clear local storage even if offline
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('authToken');
         localStorage.removeItem('userData');
+
+        // Clear API cache
+        clearCache();
+
         return { success: true };
       }
     } catch (error: any) {
@@ -1597,6 +1673,10 @@ export class ApiService {
       localStorage.removeItem('isAuthenticated');
       localStorage.removeItem('authToken');
       localStorage.removeItem('userData');
+
+      // Clear API cache
+      clearCache();
+
       return { success: true };
     }
   }

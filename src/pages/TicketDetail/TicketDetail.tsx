@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import SkeletonLoader from '../../components/SkeletonLoader/SkeletonLoader';
 import ApiService from '../../services/api';
 import { addCommentFoolproof } from '../../services/api-foolproof';
 import './TicketDetail.css';
@@ -541,7 +542,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
             // Convert API notes to Comment format
             const apiComments: Comment[] = currentTicket.notes.map((note: any, index: number) => ({
               id: `api-note-${index}`,
-              author: note.created_by || 'System',
+              author: note.created_by || 'You',
               message: note.note,
               timestamp: note.created_at || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               isAgent: true,
@@ -689,7 +690,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                 
                 const apiComments: Comment[] = currentTicket.notes.map((note: any, index: number) => ({
                   id: `api-note-${note.id || index}`,
-                  author: note.created_by || 'System',
+                  author: note.created_by || 'You',
                   message: note.note,
                   timestamp: note.created_at || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                   isAgent: true,
@@ -703,7 +704,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                 }));
                 
                 setComments(apiComments);
-                console.log('✅ Comments updated from API - now showing as System');
+                console.log('✅ Comments updated from API - now showing as You');
               }
             }
           } catch (error) {
@@ -787,8 +788,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         <div className="sidebar-tickets">
           {loading && (
             <div className="sidebar-loading">
-              <div className="loading-spinner"></div>
-              <p>Loading tickets...</p>
+              <SkeletonLoader type="sidebar-ticket" count={3} />
             </div>
           )}
           
@@ -851,6 +851,9 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         </div>
 
         <div className="comments-list">
+          {ticketLoading && comments.length === 0 && (
+            <SkeletonLoader type="comment" count={2} />
+          )}
           {comments.map((comment) => {
             console.log('🔍 Rendering comment:', {
               id: comment.id,
@@ -974,8 +977,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       <div className="ticket-detail-section">
         {ticketLoading && (
           <div className="ticket-loading">
-            <div className="loading-spinner"></div>
-            <p>Loading ticket details...</p>
+            <SkeletonLoader type="ticket-detail" count={1} />
           </div>
         )}
         
@@ -1024,7 +1026,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                   ...getStatusStyling(ticket.status),
                   padding: '4px 8px',
                   borderRadius: '4px',
-                  fontSize: '0.75rem',
+                  fontSize: '0.55rem',
                   fontWeight: '600'
                 }}
               >

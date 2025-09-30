@@ -166,7 +166,7 @@
 .sidebar-ticket-item.active {
   background: linear-gradient(135deg, #48cfd5 0%, #122a37 100%);
   color: white;
-  border-color: #48cfd5;
+  border-color: #f3f3f3;
   box-shadow: 0 6px 20px rgba(72, 207, 213, 0.4);
   transform: translateY(-1px);
 }
