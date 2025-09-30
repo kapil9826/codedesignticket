@@ -13,17 +13,17 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  padding: 12px 16px;
-  background: white;
+  padding: 16px 20px;
+  background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #e2e8f0;
 }
 
 .ticket-count {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
-  color: #1e293b;
+  color: #374151;
 }
 
 .header-controls {
@@ -38,20 +38,20 @@
 }
 
 .status-dropdown {
-  padding: 6px 10px;
+  padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   background: white;
-  font-size: 12px;
+  font-size: 13px;
   color: #374151;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 120px;
+  min-width: 130px;
 }
 
 .status-dropdown:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #9ca3af;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .status-dropdown:focus {
@@ -66,20 +66,20 @@
 }
 
 .priority-dropdown {
-  padding: 6px 10px;
+  padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   background: white;
-  font-size: 12px;
+  font-size: 13px;
   color: #374151;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 120px;
+  min-width: 130px;
 }
 
 .priority-dropdown:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #9ca3af;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .priority-dropdown:focus {

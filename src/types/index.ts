@@ -9,6 +9,12 @@ export interface Ticket {
   description: string;
   status: 'New' | 'Open' | 'In Progress' | 'Resolved' | 'Closed';
   priority: 'Low' | 'Medium' | 'High' | 'Urgent';
+  priority_name?: string;
+  priority_bg_color?: string;
+  priority_text_color?: string;
+  status_name?: string;
+  status_bg_color?: string;
+  status_text_color?: string;
   assignedTo?: string;
   createdAt: string;
 }

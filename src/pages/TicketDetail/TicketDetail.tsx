@@ -61,22 +61,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingComment, setIsUploadingComment] = useState(false);
 
-  const statusOptions = [
-    { value: 'all', label: 'All' },
-    { value: 'Active', label: 'Active' },
-    { value: 'Closed', label: 'Closed' },
-    { value: 'On-hold', label: 'On-hold' },
-    { value: 'Overdue', label: 'Overdue' },
-    { value: 'Assigned', label: 'Assigned' },
-    { value: 'Suspend', label: 'Suspend' }
-  ];
 
-  const priorityOptions = [
-    { value: 'all', label: 'All Priority' },
-    { value: 'High', label: 'High' },
-    { value: 'Medium', label: 'Medium' },
-    { value: 'Low', label: 'Low' }
-  ];
 
   // Fetch tickets from API
   const fetchTickets = async () => {
@@ -102,19 +87,38 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         if (apiTickets.length > 0) {
           console.log('🔍 Sidebar: Found', apiTickets.length, 'tickets');
           
-          const transformedTickets: Ticket[] = apiTickets.map((ticket: any) => {
+          const transformedTickets: Ticket[] = apiTickets.map((ticket: any, index: number) => {
+            console.log(`🔍 Sidebar Processing ticket ${index}:`, {
+              id: ticket.ticket_number || ticket.id,
+              priority: ticket.priority,
+              priority_name: ticket.priority_name,
+              priority_bg_color: ticket.priority_bg_color,
+              priority_text_color: ticket.priority_text_color,
+              status: ticket.status,
+              status_name: ticket.status_name,
+              status_bg_color: ticket.status_bg_color,
+              status_text_color: ticket.status_text_color,
+              fullTicket: ticket // Log the entire ticket object to see what fields are available
+            });
+            
             // Check for locally stored priority
             const localPriorities = JSON.parse(localStorage.getItem('ticketPriorities') || '{}');
             const localPriority = localPriorities[ticket.ticket_number || ticket.id];
-            const finalPriority = localPriority || ticket.priority_name || ticket.priority || 'Low';
+            const finalPriority = localPriority || ticket.priority_name || ticket.priority || 'Null';
             
             return {
               id: ticket.ticket_number || ticket.id || `TC-${ticket.id}`,
               requester: ticket.user_name || 'Unknown',
               issue: ticket.title || 'No description',
               time: ticket.created_at || new Date().toLocaleTimeString(),
-              status: ticket.status || 'Active',
+              status: ticket.status_name || ticket.status || 'Null',
               priority: finalPriority,
+              priority_name: ticket.priority_name || finalPriority,
+              priority_bg_color: ticket.priority_bg_color,
+              priority_text_color: ticket.priority_text_color,
+              status_name: ticket.status_name,
+              status_bg_color: ticket.status_bg_color,
+              status_text_color: ticket.status_text_color,
               badge: 0,
               description: ticket.description || 'No description available',
               attachments: ticket.documents ? ticket.documents.length : 0,
@@ -475,55 +479,67 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
   const [statuses, setStatuses] = useState<any[]>([]);
   const [priorities, setPriorities] = useState<any[]>([]);
 
-  // Helper function to get status styling
-  const getStatusStyling = (ticketStatus: string) => {
-    console.log('🎨 TicketDetail getStatusStyling called for:', ticketStatus);
-    console.log('🎨 TicketDetail available statuses:', statuses);
-    
-    // First try exact match
-    let statusData = statuses.find(s => s.name === ticketStatus);
-    console.log('🎨 TicketDetail exact match found:', statusData);
-    
-    // If no exact match, try common mappings
-    if (!statusData) {
-      console.log('🎨 TicketDetail no exact match found, trying mappings...');
-      if (ticketStatus === 'Active' || ticketStatus === 'active') {
-        statusData = statuses.find(s => s.name === 'Open');
-        console.log('🎨 TicketDetail mapped Active to Open:', statusData);
-      } else if (ticketStatus === 'Closed' || ticketStatus === 'closed') {
-        statusData = statuses.find(s => s.name === 'Closed');
-        console.log('🎨 TicketDetail mapped Closed to Closed:', statusData);
-      } else if (ticketStatus === 'Open' || ticketStatus === 'open') {
-        statusData = statuses.find(s => s.name === 'Open');
-        console.log('🎨 TicketDetail mapped Open to Open:', statusData);
-      } else {
-        console.log('🎨 TicketDetail no mapping found for:', ticketStatus);
-        // Try to find any status that might match
-        statusData = statuses.find(s => s.name.toLowerCase() === ticketStatus.toLowerCase());
-        console.log('🎨 TicketDetail case-insensitive match:', statusData);
-      }
-    }
-    
+  // Generate status options from API data
+  const statusOptions = [
+    { value: 'all', label: 'All Status' },
+    { value: 'Null', label: 'Null' },
+    ...statuses.map(status => ({
+      value: status.name,
+      label: status.name
+    }))
+  ];
+
+  // Generate priority options from API data
+  const priorityOptions = [
+    { value: 'all', label: 'All Priority' },
+    { value: 'Null', label: 'Null' },
+    ...priorities.map(priority => ({
+      value: priority.name,
+      label: priority.name
+    }))
+  ];
+
+  // Helper function to get status styling - uses API colors when available
+  const getStatusStyling = (ticket: any) => {
+    // Use API status colors if available, otherwise use defaults
     const styling = {
-      backgroundColor: statusData?.bg_color || '#6b7280',
-      color: statusData?.text_color || '#ffffff'
+      backgroundColor: ticket.status_bg_color || '#e2e8f0',
+      color: ticket.status_text_color || '#4a5568'
     };
     
-    console.log('🎨 TicketDetail final styling:', styling);
-    console.log('🎨 TicketDetail status data used:', statusData);
-    console.log('🎨 TicketDetail background color source:', statusData?.bg_color);
-    console.log('🎨 TicketDetail text color source:', statusData?.text_color);
+    console.log('🎨 Status styling (TicketDetail):', {
+      ticketId: ticket.id,
+      status: ticket.status,
+      status_name: ticket.status_name,
+      status_bg_color: ticket.status_bg_color,
+      status_text_color: ticket.status_text_color,
+      finalBackgroundColor: styling.backgroundColor,
+      finalTextColor: styling.color,
+      displayText: ticket.status_name || 'Null'
+    });
+    
     return styling;
   };
 
-  // Helper function to get priority styling
-  const getPriorityStyling = (ticketPriority: string) => {
-    const priorityData = priorities.find(p => p.name === ticketPriority);
-    
-    return {
-      backgroundColor: priorityData?.bg_color || '#e2e8f0',
-      color: priorityData?.text_color || '#4a5568'
+  // Helper function to get priority styling - uses API colors when available
+  const getPriorityStyling = (ticket: any) => {
+    // Use API priority colors if available, otherwise use defaults
+    const styling = {
+      backgroundColor: ticket.priority_bg_color || '#e2e8f0',
+      color: ticket.priority_text_color || '#4a5568'
     };
+    
+    console.log('🎨 Priority styling (TicketDetail):', {
+      ticketId: ticket.id,
+      priority_name: ticket.priority_name,
+      priority_bg_color: ticket.priority_bg_color,
+      priority_text_color: ticket.priority_text_color,
+      finalBackgroundColor: styling.backgroundColor,
+      finalTextColor: styling.color,
+      displayText: ticket.priority_name || 'Null'
+    });
+    
+    return styling;
   };
 
   // Fetch statuses
@@ -801,8 +817,8 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     const matchesSearch = ticket.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          ticket.issue.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          ticket.priority.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
-    const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
+    const matchesStatus = statusFilter === 'all' || ticket.status_name === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || ticket.priority_name === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
@@ -894,15 +910,15 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               <div className="sidebar-ticket-badges">
                 <div 
                   className="sidebar-ticket-priority"
-                  style={getPriorityStyling(ticket.priority)}
+                  style={getPriorityStyling(ticket)}
                 >
-                  {ticket.priority}
+                  {ticket.priority_name || ticket.priority || 'Null'}
                 </div>
                 <div 
                   className={`sidebar-ticket-status status-${ticket.status.toLowerCase().replace('-', '')}`}
-                  style={getStatusStyling(ticket.status)}
+                  style={getStatusStyling(ticket)}
                 >
-                  {ticket.status}
+                  {ticket.status_name || ticket.status || 'Null'}
                 </div>
               </div>
             </div>

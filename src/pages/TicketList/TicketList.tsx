@@ -38,72 +38,67 @@ const TicketList: React.FC = () => {
   const [priorities, setPriorities] = useState<any[]>([]);
   const ticketsPerPage = 50;
 
-  // Helper function to get status styling
-  const getStatusStyling = (ticketStatus: string) => {
-    console.log('🎨 getStatusStyling called for:', ticketStatus);
-    console.log('🎨 Available statuses:', statuses);
-    
-    // First try exact match
-    let statusData = statuses.find(s => s.name === ticketStatus);
-    console.log('🎨 Exact match found:', statusData);
-    
-    // If no exact match, try common mappings
-    if (!statusData) {
-      console.log('🎨 No exact match found, trying mappings...');
-      if (ticketStatus === 'Active' || ticketStatus === 'active') {
-        statusData = statuses.find(s => s.name === 'Open');
-        console.log('🎨 Mapped Active to Open:', statusData);
-      } else if (ticketStatus === 'Closed' || ticketStatus === 'closed') {
-        statusData = statuses.find(s => s.name === 'Closed');
-        console.log('🎨 Mapped Closed to Closed:', statusData);
-      } else if (ticketStatus === 'Open' || ticketStatus === 'open') {
-        statusData = statuses.find(s => s.name === 'Open');
-        console.log('🎨 Mapped Open to Open:', statusData);
-      } else {
-        console.log('🎨 No mapping found for:', ticketStatus);
-        // Try to find any status that might match
-        statusData = statuses.find(s => s.name.toLowerCase() === ticketStatus.toLowerCase());
-        console.log('🎨 Case-insensitive match:', statusData);
-      }
-    }
-    
+  // Helper function to get status styling - uses API colors when available
+  const getStatusStyling = (ticket: any) => {
+    // Use API status colors if available, otherwise use defaults
     const styling = {
-      backgroundColor: statusData?.bg_color || '#6b7280',
-      color: statusData?.text_color || '#ffffff'
+      backgroundColor: ticket.status_bg_color || '#e2e8f0',
+      color: ticket.status_text_color || '#4a5568'
     };
     
-    console.log('🎨 Final styling:', styling);
-    console.log('🎨 Status data used:', statusData);
-    console.log('🎨 Background color source:', statusData?.bg_color);
-    console.log('🎨 Text color source:', statusData?.text_color);
+    console.log('🎨 Status styling (TicketList):', {
+      ticketId: ticket.id,
+      status: ticket.status,
+      status_name: ticket.status_name,
+      status_bg_color: ticket.status_bg_color,
+      status_text_color: ticket.status_text_color,
+      finalBackgroundColor: styling.backgroundColor,
+      finalTextColor: styling.color,
+      displayText: ticket.status_name || 'Null'
+    });
+    
     return styling;
   };
 
-  // Helper function to get priority styling
-  const getPriorityStyling = (ticketPriority: string) => {
-    const priorityData = priorities.find(p => p.name === ticketPriority);
-    
-    return {
-      backgroundColor: priorityData?.bg_color || '#e2e8f0',
-      color: priorityData?.text_color || '#4a5568'
+  // Helper function to get priority styling - uses API colors when available
+  const getPriorityStyling = (ticket: any) => {
+    // Use API priority colors if available, otherwise use defaults
+    const styling = {
+      backgroundColor: ticket.priority_bg_color || '#e2e8f0',
+      color: ticket.priority_text_color || '#4a5568'
     };
+    
+    console.log('🎨 Priority styling (TicketList):', {
+      ticketId: ticket.id,
+      priority_name: ticket.priority_name,
+      priority_bg_color: ticket.priority_bg_color,
+      priority_text_color: ticket.priority_text_color,
+      finalBackgroundColor: styling.backgroundColor,
+      finalTextColor: styling.color,
+      displayText: ticket.priority_name || 'Null'
+    });
+    
+    return styling;
   };
 
+  // Generate status options from API data
   const statusOptions = [
     { value: 'all', label: 'All Status' },
-    { value: 'Active', label: 'Active' },
-    { value: 'Closed', label: 'Closed' },
-    { value: 'On-hold', label: 'On-hold' },
-    { value: 'Overdue', label: 'Overdue' },
-    { value: 'Assigned', label: 'Assigned' },
-    { value: 'Suspend', label: 'Suspend' }
+    { value: 'Null', label: 'Null' },
+    ...statuses.map(status => ({
+      value: status.name,
+      label: status.name
+    }))
   ];
 
+  // Generate priority options from API data
   const priorityOptions = [
     { value: 'all', label: 'All Priority' },
-    { value: 'High', label: 'High' },
-    { value: 'Medium', label: 'Medium' },
-    { value: 'Low', label: 'Low' }
+    { value: 'Null', label: 'Null' },
+    ...priorities.map(priority => ({
+      value: priority.name,
+      label: priority.name
+    }))
   ];
 
   // Fetch tickets from API with improved error handling
@@ -201,43 +196,46 @@ const TicketList: React.FC = () => {
         
         
         if (apiTickets.length > 0) {
+          // Debug: Log the first ticket to see what fields are available
+          console.log('🔍 First ticket from API:', apiTickets[0]);
+          console.log('🔍 Priority fields in first ticket:', {
+            priority: apiTickets[0]?.priority,
+            priority_name: apiTickets[0]?.priority_name,
+            priority_bg_color: apiTickets[0]?.priority_bg_color,
+            priority_text_color: apiTickets[0]?.priority_text_color
+          });
+          
           const transformedTickets: Ticket[] = apiTickets.map((ticket: any, index: number) => {
-            // Check if we have a locally stored priority for this ticket
-            const localPriorities = JSON.parse(localStorage.getItem('ticketPriorities') || '{}');
-            const localPriority = localPriorities[ticket.ticket_number || ticket.id];
+            console.log(`🔍 Processing ticket ${index}:`, {
+              id: ticket.ticket_number || ticket.id,
+              priority: ticket.priority,
+              priority_name: ticket.priority_name,
+              priority_bg_color: ticket.priority_bg_color,
+              priority_text_color: ticket.priority_text_color
+            });
             
-            const finalPriority = localPriority || ticket.priority_name || ticket.priority || 'Low';
+            // Use API data with fallback to original priority field
+            const finalPriority = ticket.priority_name || ticket.priority || 'Null';
             
             return {
               id: ticket.ticket_number || ticket.id || `TC-${ticket.id}`,
               requester: ticket.user_name || 'Unknown',
               issue: ticket.title || 'No description',
               time: ticket.created_at || new Date().toLocaleTimeString(),
-              status: ticket.status || 'Active', // Use API status if available, default to Active
+              status: ticket.status_name || ticket.status || 'Null', // Use API status_name with fallback
               priority: finalPriority,
+              priority_name: ticket.priority_name || finalPriority,
+              priority_bg_color: ticket.priority_bg_color,
+              priority_text_color: ticket.priority_text_color,
+              status_name: ticket.status_name,
+              status_bg_color: ticket.status_bg_color,
+              status_text_color: ticket.status_text_color,
               badge: 0,
               description: ticket.description || 'No description available',
               attachments: ticket.documents ? ticket.documents.length : 0,
               createdAt: ticket.created_at || new Date().toLocaleDateString(),
-              priorityBgColor: (() => {
-                switch (finalPriority.toLowerCase()) {
-                  case 'high':
-                    return '#ef4444';
-                  case 'low':
-                    return '#10b981';
-                  default:
-                    return ticket.priority_bg_color || '#e2e8f0';
-                }
-              })(),
-              priorityTextColor: (() => {
-                switch (finalPriority.toLowerCase()) {
-                  case 'high':
-                  case 'low':
-                    return 'white';
-                  default:
-                    return ticket.priority_text_color || '#4a5568';
-                }
-              })()
+              priorityBgColor: ticket.priority_bg_color || '#e2e8f0',
+              priorityTextColor: ticket.priority_text_color || '#4a5568'
             };
           });
           
@@ -348,8 +346,8 @@ const TicketList: React.FC = () => {
   const filteredTickets = tickets.filter(ticket => {
     const matchesSearch = ticket.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          ticket.issue.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
-    const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
+    const matchesStatus = statusFilter === 'all' || ticket.status_name === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || ticket.priority_name === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
@@ -395,7 +393,6 @@ const TicketList: React.FC = () => {
 
   const clearCachedData = () => {
     localStorage.removeItem('offlineTickets');
-    localStorage.removeItem('ticketPriorities');
     localStorage.removeItem('userData');
     localStorage.removeItem('authToken');
     window.location.reload();
@@ -514,15 +511,15 @@ const TicketList: React.FC = () => {
                             color: ticket.priorityTextColor || '#4a5568'
                           }}
                         >
-                          {ticket.priority}
+                          {ticket.priority_name || ticket.priority || 'Null'}
                         </span>
                       </td>
                       <td className="status-cell">
                         <span 
                           className={`status-badge status-${ticket.status.toLowerCase().replace('-', '')}`}
-                          style={getStatusStyling(ticket.status)}
+                          style={getStatusStyling(ticket)}
                         >
-                          {ticket.status}
+                          {ticket.status_name || ticket.status || 'Null'}
                         </span>
                       </td>
                       <td className="date-cell">{ticket.createdAt || ticket.time}</td>

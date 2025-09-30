@@ -265,17 +265,53 @@ export class ApiService {
       console.log('User making request:', userName);
       
       const requestFn = async () => {
-        const response = await fetchWithTimeout(`${API_BASE_URL}/tickets?page=${page}&per_page=${perPage}&limit=100&user_name=${encodeURIComponent(userName)}`, {
-          method: 'GET',
-          headers: createHeaders(),
-        }, 10000); // Reduced timeout from 15s to 10s
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // Try different endpoints to get tickets with priority data
+        const possibleEndpoints = [
+          `${API_BASE_URL}/support-tickets?page=${page}&per_page=${perPage}&limit=100&user_name=${encodeURIComponent(userName)}`,
+          `${API_BASE_URL}/tickets?page=${page}&per_page=${perPage}&limit=100&user_name=${encodeURIComponent(userName)}&include_priority=true`,
+          `${API_BASE_URL}/tickets?page=${page}&per_page=${perPage}&limit=100&user_name=${encodeURIComponent(userName)}&with_priority=true`,
+          `${API_BASE_URL}/tickets?page=${page}&per_page=${perPage}&limit=100&user_name=${encodeURIComponent(userName)}`
+        ];
+        
+        let response;
+        let lastError;
+        
+        for (const endpoint of possibleEndpoints) {
+          try {
+            console.log(`🔍 Trying endpoint: ${endpoint}`);
+            response = await fetchWithTimeout(endpoint, {
+              method: 'GET',
+              headers: createHeaders(),
+            }, 10000);
+            
+            if (response.ok) {
+              console.log(`✅ Success with endpoint: ${endpoint}`);
+              break;
+            }
+          } catch (error) {
+            console.log(`❌ Failed with endpoint: ${endpoint}`, error);
+            lastError = error;
+            continue;
+          }
+        }
+        
+        if (!response || !response.ok) {
+          throw lastError || new Error('All endpoints failed');
         }
 
         const data = await response.json();
         console.log('Get Tickets API Response:', data);
+        
+        // Debug: Check if priority data is included
+        if (data.data && Array.isArray(data.data)) {
+          console.log('🔍 Sample ticket data structure:', data.data[0]);
+          console.log('🔍 Priority fields in ticket:', {
+            priority: data.data[0]?.priority,
+            priority_name: data.data[0]?.priority_name,
+            priority_bg_color: data.data[0]?.priority_bg_color,
+            priority_text_color: data.data[0]?.priority_text_color
+          });
+        }
         
         // Check for authentication errors
         if (data.status === '0' && (data.message === 'Bearer token not passed' || data.message === 'Invalid access token')) {
@@ -1379,6 +1415,11 @@ export class ApiService {
 
       console.log('Attempting to create ticket...');
       console.log('Ticket data received:', ticketData);
+      console.log('Priority details:', {
+        priority: ticketData.priority,
+        priority_id: ticketData.priority_id,
+        priority_name: ticketData.priority_name
+      });
       console.log('Attachments:', ticketData.attachments);
       
       // Force token refresh if needed
@@ -1405,8 +1446,10 @@ export class ApiService {
         // Add basic ticket data
         formData.append('title', ticketData.title);
         formData.append('description', ticketData.description);
-        formData.append('priority', ticketData.priority);
-        formData.append('priority_name', ticketData.priority);
+        formData.append('priorities_id', ticketData.priority); // Backend expects 'priorities_id'
+        formData.append('priority', ticketData.priority); // Keep both for compatibility
+        formData.append('priority_name', ticketData.priority_name || '');
+        formData.append('priority_id', ticketData.priority_id || '');
         formData.append('channel', ticketData.channel || 'Web');
         formData.append('user_name', userName);
         
@@ -1428,6 +1471,13 @@ export class ApiService {
           }
         }
         
+        console.log('🎯 Priority fields being sent:', {
+          'priorities_id': formData.get('priorities_id'),
+          'priority': formData.get('priority'),
+          'priority_name': formData.get('priority_name'),
+          'priority_id': formData.get('priority_id')
+        });
+        
         response = await fetchWithTimeout(url, {
           method: 'POST',
           headers: {
@@ -1442,13 +1492,21 @@ export class ApiService {
         const ticketDataWithUser = {
           title: ticketData.title,
           description: ticketData.description,
-          priority: ticketData.priority,
-          priority_name: ticketData.priority,
+          priorities_id: ticketData.priority, // Backend expects 'priorities_id'
+          priority: ticketData.priority, // Keep both for compatibility
+          priority_name: ticketData.priority_name || '',
+          priority_id: ticketData.priority_id || '',
           channel: ticketData.channel || 'Web',
           user_name: userName
         };
         
         console.log('Sending ticket data (JSON):', ticketDataWithUser);
+        console.log('🎯 Priority fields being sent (JSON):', {
+          'priorities_id': ticketDataWithUser.priorities_id,
+          'priority': ticketDataWithUser.priority,
+          'priority_name': ticketDataWithUser.priority_name,
+          'priority_id': ticketDataWithUser.priority_id
+        });
         
         response = await fetchWithTimeout(url, {
           method: 'POST',

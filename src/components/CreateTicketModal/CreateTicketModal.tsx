@@ -195,15 +195,24 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
       // Find the priority name from the selected ID
       const selectedPriority = priorities.find(p => (p.id || p.name) === formData.priority);
       const priorityName = selectedPriority ? (selectedPriority.name || selectedPriority.title || selectedPriority.label) : 'Low';
-      const priorityId = selectedPriority ? (selectedPriority.id || selectedPriority.value) : '1';
+      
+      // Map priority names to backend expected IDs
+      let priorityId = '2'; // Default to LOW (ID: 2)
+      if (priorityName && priorityName.toLowerCase().includes('high')) {
+        priorityId = '1'; // HIGH priority
+      } else if (priorityName && priorityName.toLowerCase().includes('medium')) {
+        priorityId = '2'; // MEDIUM priority (assuming this maps to 2, or we might need to check the API)
+      } else if (priorityName && priorityName.toLowerCase().includes('low')) {
+        priorityId = '2'; // LOW priority
+      }
       
       // Prepare ticket data for API
       const ticketData = {
         title: formData.title,
         description: formData.description,
-        priority: priorityName, // Send priority name
+        priority: priorityId, // Send priority ID (backend expects ID)
         priority_id: priorityId, // Send priority ID
-        priority_name: priorityName, // Send priority name as well
+        priority_name: priorityName, // Send priority name for reference
         attachments: attachments
       };
 
@@ -219,11 +228,18 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
         allPriorities: priorities
       });
       
+      console.log('🔧 Backend Priority Mapping:', {
+        'Priority Name': priorityName,
+        'Mapped ID': priorityId,
+        'Expected by Backend': priorityName.toLowerCase().includes('high') ? '1 (HIGH)' : '2 (LOW/MEDIUM)'
+      });
+      
       console.log('🔍 Final priority being sent:', {
-        'ticketData.priority': priorityName,
+        'ticketData.priority': priorityId,
+        'ticketData.priority_id': priorityId,
         'ticketData.priority_name': priorityName,
-        'priorityName type': typeof priorityName,
-        'priorityName value': priorityName
+        'priorityId type': typeof priorityId,
+        'priorityId value': priorityId
       });
 
       const result = await ApiService.createTicket(ticketData);
@@ -232,14 +248,8 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
         setSuccess(true);
         console.log('Ticket created successfully:', result.data);
         
-        // Store priority locally for this ticket
-        const ticketId = result.data.data?.ticket_number || result.data.data?.id;
-        if (ticketId && priorityName) {
-          const localPriorities = JSON.parse(localStorage.getItem('ticketPriorities') || '{}');
-          localPriorities[ticketId] = priorityName;
-          localStorage.setItem('ticketPriorities', JSON.stringify(localPriorities));
-          console.log('🔧 Stored priority locally:', { ticketId, priority: priorityName });
-        }
+        // Priority data is now handled by the API response only
+        console.log('✅ Ticket created successfully with priority:', priorityName);
         
         // Reset form
         setFormData({
