@@ -1,9 +1,31 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import Login from './pages/Login/Login';
 import Header from './components/Layout/Header';
 import TicketList from './pages/TicketList/TicketList';
+import TicketDetail from './pages/TicketDetail/TicketDetail';
 import CreateTicketModal from './components/CreateTicketModal/CreateTicketModal';
+
+// Wrapper component to handle URL parameters for TicketDetail
+const TicketDetailWrapper = () => {
+  const { ticketId } = useParams<{ ticketId: string }>();
+  
+  const handleClose = () => {
+    window.history.back();
+  };
+  
+  const handleTicketChange = (newTicketId: string) => {
+    window.location.href = `/tickets/${newTicketId}`;
+  };
+  
+  return (
+    <TicketDetail 
+      ticketId={ticketId || ''} 
+      onClose={handleClose}
+      onTicketChange={handleTicketChange}
+    />
+  );
+};
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -98,6 +120,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/tickets" replace />} />
         <Route path="/tickets" element={<TicketList />} />
+        <Route path="/tickets/:ticketId" element={<TicketDetailWrapper />} />
         <Route path="*" element={<Navigate to="/tickets" replace />} />
       </Routes>
       

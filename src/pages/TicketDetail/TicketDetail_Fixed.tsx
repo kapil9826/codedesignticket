@@ -55,6 +55,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
   const [currentTicket, setCurrentTicket] = useState<any>(null);
   const [ticketLoading, setTicketLoading] = useState(true);
   const [ticketError, setTicketError] = useState<string>('');
+  const [showAttachments, setShowAttachments] = useState(true);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingComment, setIsUploadingComment] = useState(false);
@@ -89,6 +90,17 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       color: ticket.status_text_color || '#4a5568'
     };
     
+    console.log('🎨 Status styling (TicketDetail):', {
+      ticketId: ticket.id,
+      status: ticket.status,
+      status_name: ticket.status_name,
+      status_bg_color: ticket.status_bg_color,
+      status_text_color: ticket.status_text_color,
+      finalBackgroundColor: styling.backgroundColor,
+      finalTextColor: styling.color,
+      displayText: ticket.status_name || 'Null'
+    });
+    
     return styling;
   };
 
@@ -99,10 +111,20 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       color: ticket.priority_text_color || '#4a5568'
     };
     
+    console.log('🎨 Priority styling (TicketDetail):', {
+      ticketId: ticket.id,
+      priority_name: ticket.priority_name,
+      priority_bg_color: ticket.priority_bg_color,
+      priority_text_color: ticket.priority_text_color,
+      finalBackgroundColor: styling.backgroundColor,
+      finalTextColor: styling.color,
+      displayText: ticket.priority_name || 'Null'
+    });
+    
     return styling;
   };
 
-  // Fetch tickets from API for sidebar
+  // Fetch tickets from API
   const fetchTickets = async () => {
     try {
       setLoading(true);
@@ -111,7 +133,11 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       console.log('🔍 Sidebar: Fetching tickets from API...');
       const result = await ApiService.getTickets(1, 100);
       
+      console.log('🔍 Sidebar: API result:', result);
+      
       if (result.success && result.data && result.data.status === '1' && result.data.data) {
+        console.log('🔍 Sidebar: Processing API tickets...');
+        
         let apiTickets = [];
         if (Array.isArray(result.data.data)) {
           apiTickets = result.data.data;
@@ -120,7 +146,22 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         }
         
         if (apiTickets.length > 0) {
-          const transformedTickets: Ticket[] = apiTickets.map((ticket: any) => {
+          console.log('🔍 Sidebar: Found', apiTickets.length, 'tickets');
+          
+          const transformedTickets: Ticket[] = apiTickets.map((ticket: any, index: number) => {
+            console.log(`🔍 Sidebar Processing ticket ${index}:`, {
+              id: ticket.ticket_number || ticket.id,
+              priority: ticket.priority,
+              priority_name: ticket.priority_name,
+              priority_bg_color: ticket.priority_bg_color,
+              priority_text_color: ticket.priority_text_color,
+              status: ticket.status,
+              status_name: ticket.status_name,
+              status_bg_color: ticket.status_bg_color,
+              status_text_color: ticket.status_text_color,
+              fullTicket: ticket
+            });
+            
             const finalPriority = ticket.priority_name || ticket.priority || 'Null';
             
             return {
@@ -144,10 +185,13 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
           });
           
           setTickets(transformedTickets);
+          console.log('✅ Sidebar: Successfully loaded', transformedTickets.length, 'tickets');
         } else {
+          console.log('❌ Sidebar: No tickets found in API response');
           setTickets([]);
         }
       } else {
+        console.log('❌ Sidebar: API error or no data');
         setError(result.error || 'Failed to load tickets');
       }
     } catch (error: any) {
@@ -169,9 +213,13 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       let databaseId = ticketId;
       
       if (typeof ticketId === 'string' && /^\d+$/.test(ticketId)) {
+        console.log('🔢 Ticket ID is already numeric (database ID):', ticketId);
         databaseId = ticketId;
       } else {
+        console.log('🔍 Ticket ID is not numeric, need to find database ID from tickets list...');
+        
         try {
+          console.log('🔄 Fetching tickets to find database ID...');
           const ticketsResult = await ApiService.getTickets(1, 1000);
           
           if (ticketsResult.success && ticketsResult.data && ticketsResult.data.data) {
@@ -182,6 +230,8 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               apiTickets = ticketsResult.data.data.data;
             }
             
+            console.log('📋 Available tickets for ID lookup:', apiTickets.length);
+            
             const matchingTicket = apiTickets.find((ticket: any) => {
               const matchesTicketNumber = ticket.ticket_number === ticketId;
               const matchesId = ticket.id === ticketId;
@@ -190,10 +240,17 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
             
             if (matchingTicket) {
               databaseId = matchingTicket.id;
+              console.log('✅ Found matching ticket:', {
+                ticketNumber: ticketId,
+                databaseId: matchingTicket.id,
+                ticketData: matchingTicket
+              });
             } else {
+              console.log('⚠️ No matching ticket found, using ticket ID as fallback');
               const match = ticketId.match(/\d+/);
               if (match) {
                 databaseId = match[0];
+                console.log('🔢 Using extracted ID from ticket number:', databaseId);
               }
             }
           }
@@ -202,10 +259,15 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         }
       }
       
+      console.log('🔢 Final database ID:', databaseId, 'for ticket:', ticketId);
+      
       const result = await ApiService.getTicketDetails(databaseId);
       
       if (result.success && result.data && result.data.status === '1') {
+        console.log('✅ API ticket details:', result.data);
+        
         const ticketData = result.data.data;
+        console.log('🔍 Raw ticket data from API:', ticketData);
         
         const transformedTicket = {
           id: ticketData.ticket_number || ticketData.id || ticketId,
@@ -222,30 +284,14 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
           department: ticketData.department || 'General',
           category: ticketData.category || 'General',
           documents: ticketData.documents || [],
-          notes: ticketData.notes || [],
-          status_name: ticketData.status_name,
-          status_bg_color: ticketData.status_bg_color,
-          status_text_color: ticketData.status_text_color,
-          priority_name: ticketData.priority_name,
-          priority_bg_color: ticketData.priority_bg_color,
-          priority_text_color: ticketData.priority_text_color
+          notes: ticketData.notes || []
         };
         
+        console.log('🔍 Transformed ticket data:', transformedTicket);
         setCurrentTicket(transformedTicket);
-        
-        // Load existing comments from notes
-        if (transformedTicket.notes && Array.isArray(transformedTicket.notes)) {
-          const existingComments: Comment[] = transformedTicket.notes.map((note: any, index: number) => ({
-            id: `note-${index}`,
-            author: note.author || 'System',
-            message: note.content || note.message || note.note || 'No content',
-            timestamp: note.created_at || note.timestamp || new Date().toISOString(),
-            isAgent: note.is_agent || note.isAgent || false,
-            attachments: note.attachments || []
-          }));
-          setComments(existingComments);
-        }
+        console.log('✅ Transformed ticket data:', transformedTicket);
       } else {
+        console.log('❌ Failed to fetch ticket details:', result.error);
         setTicketError(result.error || 'Failed to load ticket details');
       }
     } catch (error) {
@@ -259,23 +305,31 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
   // Fetch statuses
   const fetchStatuses = async () => {
     try {
+      console.log('🎨 TicketDetail fetching ticket statuses...');
       const result = await ApiService.getTicketStatuses();
       
       if (result.success && result.data && result.data.status === '1') {
+        console.log('✅ TicketDetail statuses fetched successfully:', result.data);
         setStatuses(result.data.data || []);
+      } else {
+        console.error('❌ TicketDetail failed to fetch statuses:', result.error);
       }
     } catch (error: any) {
-      console.error('❌ Error fetching statuses:', error);
+      console.error('❌ TicketDetail error fetching statuses:', error);
     }
   };
 
   // Fetch priorities
   const fetchPriorities = async () => {
     try {
+      console.log('Fetching ticket priorities...');
       const result = await ApiService.getTicketPriorities();
       
       if (result.success && result.data && result.data.status === '1') {
+        console.log('✅ Priorities fetched successfully:', result.data);
         setPriorities(result.data.data || []);
+      } else {
+        console.error('❌ Failed to fetch priorities:', result.error);
       }
     } catch (error: any) {
       console.error('❌ Error fetching priorities:', error);
@@ -284,11 +338,14 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
 
   // File selection handler
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📎 handleFileSelect called');
     const files = Array.from(event.target.files || []);
+    console.log('📎 Files selected:', files.length, files.map(f => f.name));
     
     if (files.length > 0) {
       setSelectedFiles(prev => {
         const newFiles = [...prev, ...files];
+        console.log('📎 Updated selected files:', newFiles.length, newFiles.map(f => f.name));
         return newFiles;
       });
     }
@@ -296,6 +353,15 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
 
   // Add comment handler
   const handleAddComment = async () => {
+    console.log('🚀 ===== FOOLPROOF ADD COMMENT =====');
+    console.log('🔍 Input:', { 
+      ticketId, 
+      comment: newComment, 
+      files: selectedFiles.length,
+      fileNames: selectedFiles.map(f => f.name),
+      fileSizes: selectedFiles.map(f => f.size)
+    });
+    
     if (!newComment.trim() && selectedFiles.length === 0) {
       alert('Please enter a comment or select a file to attach.');
       return;
@@ -307,6 +373,9 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       const result = await addCommentFoolproof(ticketId, newComment, selectedFiles);
       
       if (result.success) {
+        console.log('✅ Comment added successfully:', result.data);
+        
+        // Add the new comment to the local state
         const newCommentObj: Comment = {
           id: Date.now().toString(),
           author: 'You',
@@ -329,6 +398,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
           fileInputRef.current.value = '';
         }
       } else {
+        console.error('❌ Failed to add comment:', result.error);
         alert('Failed to add comment. Please try again.');
       }
     } catch (error) {
@@ -351,8 +421,8 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     const matchesSearch = ticket.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          ticket.issue.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          ticket.priority.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || (ticket as any).status_name === statusFilter;
-    const matchesPriority = priorityFilter === 'all' || (ticket as any).priority_name === priorityFilter;
+    const matchesStatus = statusFilter === 'all' || ticket.status_name === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || ticket.priority_name === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
@@ -364,8 +434,10 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
 
   useEffect(() => {
     if (ticketId) {
+      console.log('🔍 Looking for ticket:', ticketId);
       fetchTicketDetails(ticketId);
     } else {
+      console.log('⚠️ No ticketId provided, creating fallback ticket');
       const fallbackTicket = {
         id: 'Unknown',
         title: 'Ticket not found',
@@ -390,10 +462,9 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
 
   return (
     <div className="ticket-detail-container">
-      {/* Main Content Area */}
       <div className="ticket-detail-content">
         {ticketLoading ? (
-          <SkeletonLoader type="ticket-detail" />
+          <SkeletonLoader />
         ) : ticketError ? (
           <div className="error-message">
             <h3>Error Loading Ticket</h3>
@@ -402,146 +473,81 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
           </div>
         ) : currentTicket ? (
           <>
-            {/* Ticket Header */}
             <div className="ticket-header">
-              <div className="ticket-title-section">
-                <h1 className="ticket-title">{currentTicket.title}</h1>
-                <div className="ticket-meta-info">
-                  <span className="ticket-id">#{currentTicket.id}</span>
-                  <span className="ticket-date">
-                    Created: {new Date(currentTicket.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
+              <h1>{currentTicket.title}</h1>
               <button onClick={onClose} className="close-button">×</button>
             </div>
             
-            {/* Ticket Status and Priority */}
-            <div className="ticket-status-priority">
-              <div className="status-section">
-                <label>Status:</label>
-                <span 
-                  className={`status-badge status-${currentTicket.status.toLowerCase()}`}
-                  style={getStatusStyling(currentTicket)}
-                >
-                  {currentTicket.status_name || currentTicket.status}
-                </span>
-              </div>
-              <div className="priority-section">
-                <label>Priority:</label>
-                <span 
-                  className={`priority-badge priority-${currentTicket.priority.toLowerCase()}`}
-                  style={getPriorityStyling(currentTicket)}
-                >
-                  {currentTicket.priority_name || currentTicket.priority}
-                </span>
-              </div>
-            </div>
-            
-            {/* Ticket Information */}
-            <div className="ticket-info-grid">
-              <div className="info-item">
-                <label>Assigned To:</label>
-                <span>{currentTicket.assignedTo}</span>
-              </div>
-              <div className="info-item">
-                <label>Department:</label>
-                <span>{currentTicket.department}</span>
-              </div>
-              <div className="info-item">
-                <label>Category:</label>
-                <span>{currentTicket.category}</span>
-              </div>
-              <div className="info-item">
-                <label>User:</label>
-                <span>{currentTicket.userName}</span>
-              </div>
-              <div className="info-item">
-                <label>Email:</label>
-                <span>{currentTicket.userEmail}</span>
-              </div>
-              <div className="info-item">
-                <label>Phone:</label>
-                <span>{currentTicket.userPhone}</span>
-              </div>
-            </div>
-            
-            {/* Ticket Description */}
-            <div className="ticket-description-section">
-              <h3>Description</h3>
-              <div className="description-content">
-                {currentTicket.description}
-              </div>
-            </div>
-            
-            {/* Attachments Section */}
-            {currentTicket.documents && currentTicket.documents.length > 0 && (
-              <div className="attachments-section">
-                <h3>Attachments</h3>
-                <div className="attachments-list">
-                  {currentTicket.documents.map((doc: any, index: number) => (
-                    <div key={index} className="attachment-item">
-                      📎 {doc.name || doc.filename || `Document ${index + 1}`}
-                    </div>
-                  ))}
+            <div className="ticket-info">
+              <div className="ticket-meta">
+                <div className="meta-item">
+                  <label>Status:</label>
+                  <span className={`status-badge status-${currentTicket.status.toLowerCase()}`}>
+                    {currentTicket.status}
+                  </span>
+                </div>
+                <div className="meta-item">
+                  <label>Priority:</label>
+                  <span className={`priority-badge priority-${currentTicket.priority.toLowerCase()}`}>
+                    {currentTicket.priority}
+                  </span>
+                </div>
+                <div className="meta-item">
+                  <label>Assigned To:</label>
+                  <span>{currentTicket.assignedTo}</span>
+                </div>
+                <div className="meta-item">
+                  <label>Created:</label>
+                  <span>{new Date(currentTicket.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
-            )}
+            </div>
             
-            {/* Comments Section */}
+            <div className="ticket-description">
+              <h3>Description</h3>
+              <p>{currentTicket.description}</p>
+            </div>
+            
             <div className="comments-section">
-              <h3>Comments ({comments.length})</h3>
-              
-              {/* Comments List */}
+              <h3>Comments</h3>
               <div className="comments-list">
-                {comments.length === 0 ? (
-                  <div className="no-comments">No comments yet</div>
-                ) : (
-                  comments.map(comment => (
-                    <div key={comment.id} className={`comment ${comment.isAgent ? 'agent' : 'user'}`}>
-                      <div className="comment-header">
-                        <span className="comment-author">{comment.author}</span>
-                        <span className="comment-time">
-                          {new Date(comment.timestamp).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="comment-content">{comment.message}</div>
-                      {comment.attachments && comment.attachments.length > 0 && (
-                        <div className="comment-attachments">
-                          {comment.attachments.map(attachment => (
-                            <div key={attachment.id} className="attachment-item">
-                              📎 {attachment.name} ({attachment.size})
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                {comments.map(comment => (
+                  <div key={comment.id} className={`comment ${comment.isAgent ? 'agent' : 'user'}`}>
+                    <div className="comment-header">
+                      <span className="comment-author">{comment.author}</span>
+                      <span className="comment-time">
+                        {new Date(comment.timestamp).toLocaleString()}
+                      </span>
                     </div>
-                  ))
-                )}
+                    <div className="comment-content">{comment.message}</div>
+                    {comment.attachments && comment.attachments.length > 0 && (
+                      <div className="comment-attachments">
+                        {comment.attachments.map(attachment => (
+                          <div key={attachment.id} className="attachment-item">
+                            📎 {attachment.name} ({attachment.size})
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
               
-              {/* Add Comment Form */}
-              <div className="add-comment-form">
-                <div className="comment-input-section">
-                  <textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Add a comment... (Ctrl+Enter to send)"
-                    className="comment-textarea"
-                    rows={3}
-                  />
-                  
-                  {/* Selected Files Display */}
-                  {selectedFiles.length > 0 && (
-                    <div className="selected-files">
-                      {selectedFiles.map((file, index) => (
-                        <div key={index} className="file-item">
-                          📎 {file.name} ({(file.size / 1024).toFixed(1)}KB)
-                        </div>
-                      ))}
+              <div className="add-comment">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Add a comment... (Ctrl+Enter to send)"
+                  className="comment-textarea"
+                />
+                
+                <div className="selected-files">
+                  {selectedFiles.map((file, index) => (
+                    <div key={index} className="file-item">
+                      📎 {file.name} ({(file.size / 1024).toFixed(1)}KB)
                     </div>
-                  )}
+                  ))}
                 </div>
                 
                 <div className="comment-actions">
@@ -563,7 +569,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                   
                   <button 
                     onClick={handleAddComment}
-                    disabled={isUploadingComment || (!newComment.trim() && selectedFiles.length === 0)}
+                    disabled={isUploadingComment}
                     className="add-comment-btn"
                   >
                     {isUploadingComment ? 'Sending...' : 'Send Comment'}
@@ -580,13 +586,11 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         )}
       </div>
       
-      {/* Sidebar */}
       <div className="ticket-sidebar">
         <div className="sidebar-header">
           <h3>All Tickets</h3>
         </div>
         
-        {/* Sidebar Filters */}
         <div className="sidebar-filters">
           <input
             type="text"
@@ -621,7 +625,6 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
           </select>
         </div>
         
-        {/* Sidebar Tickets List */}
         <div className="sidebar-tickets">
           {loading ? (
             <div className="loading-tickets">Loading tickets...</div>

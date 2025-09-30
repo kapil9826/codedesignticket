@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import TicketDetail from '../TicketDetail/TicketDetail';
+import { useNavigate } from 'react-router-dom';
 import SkeletonLoader from '../../components/SkeletonLoader/SkeletonLoader';
 import ApiService from '../../services/api';
 import './TicketList.css';
@@ -22,11 +22,11 @@ interface Ticket {
 // Mock data removed - using only API data
 
 const TicketList: React.FC = () => {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
-  const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -60,32 +60,20 @@ const TicketList: React.FC = () => {
     return styling;
   };
 
-  // Helper function to get priority styling - uses API colors when available
-  const getPriorityStyling = (ticket: any) => {
-    // Use API priority colors if available, otherwise use defaults
-    const styling = {
-      backgroundColor: ticket.priority_bg_color || '#e2e8f0',
-      color: ticket.priority_text_color || '#4a5568'
-    };
-    
-    console.log('🎨 Priority styling (TicketList):', {
-      ticketId: ticket.id,
-      priority_name: ticket.priority_name,
-      priority_bg_color: ticket.priority_bg_color,
-      priority_text_color: ticket.priority_text_color,
-      finalBackgroundColor: styling.backgroundColor,
-      finalTextColor: styling.color,
-      displayText: ticket.priority_name || 'Null'
-    });
-    
-    return styling;
-  };
+  // Helper function to get priority styling - uses API colors when available (currently unused)
+  // const getPriorityStyling = (ticket: any) => {
+  //   const styling = {
+  //     backgroundColor: ticket.priority_bg_color || '#e2e8f0',
+  //     color: ticket.priority_text_color || '#4a5568'
+  //   };
+  //   return styling;
+  // };
 
   // Generate status options from API data
   const statusOptions = [
     { value: 'all', label: 'All Status' },
     { value: 'Null', label: 'Null' },
-    ...statuses.map(status => ({
+    ...statuses.map((status: any) => ({
       value: status.name,
       label: status.name
     }))
@@ -110,10 +98,10 @@ const TicketList: React.FC = () => {
       if (result.success && result.data && result.data.status === '1') {
         console.log('✅ Statuses fetched successfully:', result.data);
         console.log('🎨 Status data structure:', result.data.data);
-        console.log('🎨 Status colors:', result.data.data?.map(s => ({ name: s.name, bg_color: s.bg_color, text_color: s.text_color })));
+        console.log('🎨 Status colors:', result.data.data?.map((s: any) => ({ name: s.name, bg_color: s.bg_color, text_color: s.text_color })));
         
         // Debug each status individually
-        result.data.data?.forEach((status, index) => {
+        result.data.data?.forEach((status: any, index: number) => {
           console.log(`🎨 Status ${index}:`, {
             name: status.name,
             bg_color: status.bg_color,
@@ -346,8 +334,8 @@ const TicketList: React.FC = () => {
   const filteredTickets = tickets.filter(ticket => {
     const matchesSearch = ticket.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          ticket.issue.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || ticket.status_name === statusFilter;
-    const matchesPriority = priorityFilter === 'all' || ticket.priority_name === priorityFilter;
+    const matchesStatus = statusFilter === 'all' || (ticket as any).status_name === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || (ticket as any).priority_name === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
@@ -360,7 +348,7 @@ const TicketList: React.FC = () => {
       title: t.issue,
       priority: t.priority,
       status: t.status,
-      isOffline: t.isOffline
+      isOffline: (t as any).isOffline
     })),
     allTicketIds: tickets.map(t => t.id),
     allTicketTitles: tickets.map(t => t.issue)
@@ -379,11 +367,7 @@ const TicketList: React.FC = () => {
   };
 
   const handleTicketClick = (ticketId: string) => {
-    setSelectedTicket(ticketId);
-  };
-
-  const handleCloseDetail = () => {
-    setSelectedTicket(null);
+    navigate(`/tickets/${ticketId}`);
   };
 
 
@@ -401,8 +385,7 @@ const TicketList: React.FC = () => {
 
   return (
     <div className="ticket-list-container">
-      {!selectedTicket && (
-        <>
+      <>
           <div className="ticket-list-header">
             <div className="ticket-count">Total ticket {totalTickets}</div>
             <div className="header-controls">
@@ -500,7 +483,7 @@ const TicketList: React.FC = () => {
                     >
                       <td className="ticket-id-cell">
                         {ticket.id}
-                        {ticket.isOffline && <span className="offline-indicator" title="Created offline"> 📱</span>}
+                        {(ticket as any).isOffline && <span className="offline-indicator" title="Created offline"> 📱</span>}
                       </td>
                       <td className="ticket-subject-cell">{ticket.issue}</td>
                       <td className="priority-cell">
@@ -511,7 +494,7 @@ const TicketList: React.FC = () => {
                             color: ticket.priorityTextColor || '#4a5568'
                           }}
                         >
-                          {ticket.priority_name || ticket.priority || 'Null'}
+                          {(ticket as any).priority_name || ticket.priority || 'Null'}
                         </span>
                       </td>
                       <td className="status-cell">
@@ -519,7 +502,7 @@ const TicketList: React.FC = () => {
                           className={`status-badge status-${ticket.status.toLowerCase().replace('-', '')}`}
                           style={getStatusStyling(ticket)}
                         >
-                          {ticket.status_name || ticket.status || 'Null'}
+                          {(ticket as any).status_name || ticket.status || 'Null'}
                         </span>
                       </td>
                       <td className="date-cell">{ticket.createdAt || ticket.time}</td>
@@ -571,16 +554,8 @@ const TicketList: React.FC = () => {
               </div>
             </div>
           )}
-        </>
-      )}
+      </>
       
-      {selectedTicket && (
-        <TicketDetail 
-          ticketId={selectedTicket} 
-          onClose={handleCloseDetail}
-          onTicketChange={setSelectedTicket}
-        />
-      )}
     </div>
   );
 };
