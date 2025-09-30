@@ -679,26 +679,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                 <span className="meta-label">User Email:</span>
                 <span className="meta-value">{currentTicket.userEmail || 'No email'}</span>
               </div>
-              
-              <div className="meta-item">
-                <span className="meta-label">User Phone:</span>
-                <span className="meta-value">{currentTicket.userPhone || 'N/A'}</span>
-              </div>
-              
-              <div className="meta-item">
-                <span className="meta-label">Assigned To:</span>
-                <span className="meta-value">{currentTicket.assignedTo || 'Unassigned'}</span>
-              </div>
-              
-              <div className="meta-item">
-                <span className="meta-label">Department:</span>
-                <span className="meta-value">{currentTicket.department || 'General'}</span>
-              </div>
-              
-              <div className="meta-item">
-                <span className="meta-label">Category:</span>
-                <span className="meta-value">{currentTicket.category || 'General'}</span>
-              </div>
+            
               
               <div className="meta-item">
                 <span className="meta-label">Status:</span>
