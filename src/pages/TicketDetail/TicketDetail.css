@@ -567,6 +567,91 @@
   opacity: 0.7;
 }
 
+/* Ticket Attachments Section */
+.ticket-attachments {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.ticket-attachments h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ticket-attachments h3::before {
+  content: "📎";
+  font-size: 1rem;
+}
+
+.attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.attachment-item:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.attachment-icon {
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+.attachment-name {
+  flex: 1;
+  font-size: 0.85rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.attachment-link {
+  color: #3b82f6;
+  text-decoration: none;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+  background: #eff6ff;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.attachment-link:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.no-attachments {
+  text-align: center;
+  padding: 1rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.no-attachments p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
 /* Comment Attachments */
 .comment-attachments {
   margin-top: 0.25rem;

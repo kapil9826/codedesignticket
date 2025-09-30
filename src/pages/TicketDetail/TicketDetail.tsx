@@ -233,6 +233,15 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
           priority_text_color: ticketData.priority_text_color
         };
         
+        // Debug: Log ticket data to see what we're getting
+        console.log('🔍 Ticket data from API:', {
+          id: transformedTicket.id,
+          title: transformedTicket.title,
+          documents: ticketData.documents,
+          documentsLength: ticketData.documents ? ticketData.documents.length : 0,
+          fullTicketData: ticketData
+        });
+        
         setCurrentTicket(transformedTicket);
         
         // Load existing comments from notes - FIXED: Better comment loading
@@ -660,10 +669,10 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               <p>{currentTicket.description}</p>
             </div>
 
-            {/* FIXED: Added Attachments Section */}
-            {currentTicket.documents && currentTicket.documents.length > 0 && (
-              <div className="ticket-attachments">
-                <h3>Attachments ({currentTicket.documents.length})</h3>
+            {/* Attachments Section - Always Show */}
+            <div className="ticket-attachments">
+              <h3>Attachments ({currentTicket.documents ? currentTicket.documents.length : 0})</h3>
+              {currentTicket.documents && currentTicket.documents.length > 0 ? (
                 <div className="attachments-list">
                   {currentTicket.documents.map((doc: any, index: number) => (
                     <div key={index} className="attachment-item">
@@ -684,8 +693,12 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="no-attachments">
+                  <p>No attachments found for this ticket.</p>
+                </div>
+              )}
+            </div>
 
             <div className="ticket-meta">
               <div className="meta-item">
