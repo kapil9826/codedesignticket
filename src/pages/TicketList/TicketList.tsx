@@ -35,25 +35,57 @@ const TicketList: React.FC = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
   const [statuses, setStatuses] = useState<any[]>([]);
+  const [priorities, setPriorities] = useState<any[]>([]);
   const ticketsPerPage = 50;
 
   // Helper function to get status styling
   const getStatusStyling = (ticketStatus: string) => {
+    console.log('🎨 getStatusStyling called for:', ticketStatus);
+    console.log('🎨 Available statuses:', statuses);
+    
     // First try exact match
     let statusData = statuses.find(s => s.name === ticketStatus);
+    console.log('🎨 Exact match found:', statusData);
     
     // If no exact match, try common mappings
     if (!statusData) {
-      if (ticketStatus === 'Active') {
+      console.log('🎨 No exact match found, trying mappings...');
+      if (ticketStatus === 'Active' || ticketStatus === 'active') {
         statusData = statuses.find(s => s.name === 'Open');
-      } else if (ticketStatus === 'Closed') {
+        console.log('🎨 Mapped Active to Open:', statusData);
+      } else if (ticketStatus === 'Closed' || ticketStatus === 'closed') {
         statusData = statuses.find(s => s.name === 'Closed');
+        console.log('🎨 Mapped Closed to Closed:', statusData);
+      } else if (ticketStatus === 'Open' || ticketStatus === 'open') {
+        statusData = statuses.find(s => s.name === 'Open');
+        console.log('🎨 Mapped Open to Open:', statusData);
+      } else {
+        console.log('🎨 No mapping found for:', ticketStatus);
+        // Try to find any status that might match
+        statusData = statuses.find(s => s.name.toLowerCase() === ticketStatus.toLowerCase());
+        console.log('🎨 Case-insensitive match:', statusData);
       }
     }
     
-    return {
+    const styling = {
       backgroundColor: statusData?.bg_color || '#6b7280',
       color: statusData?.text_color || '#ffffff'
+    };
+    
+    console.log('🎨 Final styling:', styling);
+    console.log('🎨 Status data used:', statusData);
+    console.log('🎨 Background color source:', statusData?.bg_color);
+    console.log('🎨 Text color source:', statusData?.text_color);
+    return styling;
+  };
+
+  // Helper function to get priority styling
+  const getPriorityStyling = (ticketPriority: string) => {
+    const priorityData = priorities.find(p => p.name === ticketPriority);
+    
+    return {
+      backgroundColor: priorityData?.bg_color || '#e2e8f0',
+      color: priorityData?.text_color || '#4a5568'
     };
   };
 
@@ -77,17 +109,46 @@ const TicketList: React.FC = () => {
   // Fetch tickets from API with improved error handling
   const fetchStatuses = async () => {
     try {
-      console.log('Fetching ticket statuses...');
+      console.log('🎨 Fetching ticket statuses...');
       const result = await ApiService.getTicketStatuses();
       
       if (result.success && result.data && result.data.status === '1') {
         console.log('✅ Statuses fetched successfully:', result.data);
+        console.log('🎨 Status data structure:', result.data.data);
+        console.log('🎨 Status colors:', result.data.data?.map(s => ({ name: s.name, bg_color: s.bg_color, text_color: s.text_color })));
+        
+        // Debug each status individually
+        result.data.data?.forEach((status, index) => {
+          console.log(`🎨 Status ${index}:`, {
+            name: status.name,
+            bg_color: status.bg_color,
+            text_color: status.text_color,
+            id: status.id
+          });
+        });
+        
         setStatuses(result.data.data || []);
       } else {
         console.error('❌ Failed to fetch statuses:', result.error);
       }
     } catch (error: any) {
       console.error('❌ Error fetching statuses:', error);
+    }
+  };
+
+  const fetchPriorities = async () => {
+    try {
+      console.log('Fetching ticket priorities...');
+      const result = await ApiService.getTicketPriorities();
+      
+      if (result.success && result.data && result.data.status === '1') {
+        console.log('✅ Priorities fetched successfully:', result.data);
+        setPriorities(result.data.data || []);
+      } else {
+        console.error('❌ Failed to fetch priorities:', result.error);
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching priorities:', error);
     }
   };
 
@@ -263,9 +324,10 @@ const TicketList: React.FC = () => {
     };
 
   // Load tickets on component mount and when page changes
-  // Fetch statuses when component mounts
+  // Fetch statuses and priorities when component mounts
   useEffect(() => {
     fetchStatuses();
+    fetchPriorities();
   }, []);
 
   useEffect(() => {

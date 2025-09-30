@@ -473,41 +473,103 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [statuses, setStatuses] = useState<any[]>([]);
+  const [priorities, setPriorities] = useState<any[]>([]);
 
   // Helper function to get status styling
   const getStatusStyling = (ticketStatus: string) => {
+    console.log('🎨 TicketDetail getStatusStyling called for:', ticketStatus);
+    console.log('🎨 TicketDetail available statuses:', statuses);
+    
     // First try exact match
     let statusData = statuses.find(s => s.name === ticketStatus);
+    console.log('🎨 TicketDetail exact match found:', statusData);
     
     // If no exact match, try common mappings
     if (!statusData) {
-      if (ticketStatus === 'Active') {
+      console.log('🎨 TicketDetail no exact match found, trying mappings...');
+      if (ticketStatus === 'Active' || ticketStatus === 'active') {
         statusData = statuses.find(s => s.name === 'Open');
-      } else if (ticketStatus === 'Closed') {
+        console.log('🎨 TicketDetail mapped Active to Open:', statusData);
+      } else if (ticketStatus === 'Closed' || ticketStatus === 'closed') {
         statusData = statuses.find(s => s.name === 'Closed');
+        console.log('🎨 TicketDetail mapped Closed to Closed:', statusData);
+      } else if (ticketStatus === 'Open' || ticketStatus === 'open') {
+        statusData = statuses.find(s => s.name === 'Open');
+        console.log('🎨 TicketDetail mapped Open to Open:', statusData);
+      } else {
+        console.log('🎨 TicketDetail no mapping found for:', ticketStatus);
+        // Try to find any status that might match
+        statusData = statuses.find(s => s.name.toLowerCase() === ticketStatus.toLowerCase());
+        console.log('🎨 TicketDetail case-insensitive match:', statusData);
       }
     }
     
-    return {
+    const styling = {
       backgroundColor: statusData?.bg_color || '#6b7280',
       color: statusData?.text_color || '#ffffff'
+    };
+    
+    console.log('🎨 TicketDetail final styling:', styling);
+    console.log('🎨 TicketDetail status data used:', statusData);
+    console.log('🎨 TicketDetail background color source:', statusData?.bg_color);
+    console.log('🎨 TicketDetail text color source:', statusData?.text_color);
+    return styling;
+  };
+
+  // Helper function to get priority styling
+  const getPriorityStyling = (ticketPriority: string) => {
+    const priorityData = priorities.find(p => p.name === ticketPriority);
+    
+    return {
+      backgroundColor: priorityData?.bg_color || '#e2e8f0',
+      color: priorityData?.text_color || '#4a5568'
     };
   };
 
   // Fetch statuses
   const fetchStatuses = async () => {
     try {
-      console.log('Fetching ticket statuses...');
+      console.log('🎨 TicketDetail fetching ticket statuses...');
       const result = await ApiService.getTicketStatuses();
       
       if (result.success && result.data && result.data.status === '1') {
-        console.log('✅ Statuses fetched successfully:', result.data);
+        console.log('✅ TicketDetail statuses fetched successfully:', result.data);
+        console.log('🎨 TicketDetail status data structure:', result.data.data);
+        console.log('🎨 TicketDetail status colors:', result.data.data?.map(s => ({ name: s.name, bg_color: s.bg_color, text_color: s.text_color })));
+        
+        // Debug each status individually
+        result.data.data?.forEach((status, index) => {
+          console.log(`🎨 TicketDetail Status ${index}:`, {
+            name: status.name,
+            bg_color: status.bg_color,
+            text_color: status.text_color,
+            id: status.id
+          });
+        });
+        
         setStatuses(result.data.data || []);
       } else {
-        console.error('❌ Failed to fetch statuses:', result.error);
+        console.error('❌ TicketDetail failed to fetch statuses:', result.error);
       }
     } catch (error: any) {
-      console.error('❌ Error fetching statuses:', error);
+      console.error('❌ TicketDetail error fetching statuses:', error);
+    }
+  };
+
+  // Fetch priorities
+  const fetchPriorities = async () => {
+    try {
+      console.log('Fetching ticket priorities...');
+      const result = await ApiService.getTicketPriorities();
+      
+      if (result.success && result.data && result.data.status === '1') {
+        console.log('✅ Priorities fetched successfully:', result.data);
+        setPriorities(result.data.data || []);
+      } else {
+        console.error('❌ Failed to fetch priorities:', result.error);
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching priorities:', error);
     }
   };
 
@@ -574,9 +636,10 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     fetchRealNotes();
   }, [ticketId]);
 
-  // Fetch statuses when component mounts
+  // Fetch statuses and priorities when component mounts
   React.useEffect(() => {
     fetchStatuses();
+    fetchPriorities();
   }, []);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -829,7 +892,10 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               <div className="sidebar-ticket-id">{ticket.id}</div>
               <div className="sidebar-ticket-issue">{ticket.issue}</div>
               <div className="sidebar-ticket-badges">
-                <div className={`sidebar-ticket-priority priority-${ticket.priority.toLowerCase()}`}>
+                <div 
+                  className="sidebar-ticket-priority"
+                  style={getPriorityStyling(ticket.priority)}
+                >
                   {ticket.priority}
                 </div>
                 <div 
@@ -925,7 +991,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               onChange={(e) => setNewComment(e.target.value)}
               onKeyPress={handleKeyPress}
               className="comment-textarea"
-              rows={4}
+              rows={1}
               data-gramm="false"
               data-gramm_editor="false"
               data-enable-grammarly="false"
@@ -943,15 +1009,6 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               <label 
                 htmlFor="file-input" 
                 className="attachment-btn"
-                onClick={() => {
-                  console.log('📎 Attachment button clicked');
-                  if (fileInputRef.current) {
-                    console.log('📎 File input ref exists, triggering click');
-                    fileInputRef.current.click();
-                  } else {
-                    console.log('❌ File input ref is null');
-                  }
-                }}
               >
                 📎 Attach Files
               </label>
@@ -1133,6 +1190,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
             </div>
           </div>
         </div>
+
           </>
         )}
       </div>

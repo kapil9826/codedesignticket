@@ -7,6 +7,7 @@ interface CreateTicketModalProps {
 }
 
 const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -105,6 +106,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
     loadPriorities();
   }, []);
 
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -114,18 +116,25 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only process files from the create ticket file input
+    if (e.target.id !== 'create-ticket-file-input') {
+      return;
+    }
+    
     const files = Array.from(e.target.files || []);
     const currentCount = attachments.length;
     const newFilesCount = files.length;
     const totalCount = currentCount + newFilesCount;
     
     if (totalCount > 2) {
-      setError(`You can only upload a maximum of 2 attachments. You currently have ${currentCount} attachment(s) and tried to add ${newFilesCount} more. Please remove some attachments first.`);
+      const errorMsg = `You can only upload a maximum of 2 attachments. You currently have ${currentCount} attachment(s) and tried to add ${newFilesCount} more. Please remove some attachments first.`;
+      setError(errorMsg);
       return;
     }
     
     if (newFilesCount > 2) {
-      setError('You can only select up to 2 files at once.');
+      const errorMsg = 'You can only select up to 2 files at once.';
+      setError(errorMsg);
       return;
     }
     
@@ -135,6 +144,44 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
 
   const removeAttachment = (index: number) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Robust file selection function that works in any context
+  const triggerFileSelection = () => {
+    // Try to use the existing file input first
+    const fileInput = document.getElementById('create-ticket-file-input') as HTMLInputElement;
+    if (fileInput && !fileInput.disabled) {
+      fileInput.click();
+      return;
+    }
+    
+    // Create a temporary file input as fallback
+    const tempInput = document.createElement('input');
+    tempInput.type = 'file';
+    tempInput.multiple = true;
+    tempInput.accept = '*/*';
+    tempInput.style.display = 'none';
+    tempInput.style.position = 'absolute';
+    tempInput.style.left = '-9999px';
+    document.body.appendChild(tempInput);
+    
+    tempInput.onchange = (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files) {
+        handleFileChange(e as any);
+      }
+      // Clean up
+      setTimeout(() => {
+        if (document.body.contains(tempInput)) {
+          document.body.removeChild(tempInput);
+        }
+      }, 100);
+    };
+    
+    // Trigger the file selection
+    setTimeout(() => {
+      tempInput.click();
+    }, 10);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -161,6 +208,9 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
       };
 
       console.log('Creating ticket:', ticketData);
+      console.log('📎 Attachments being sent:', attachments);
+      console.log('📎 Attachments count:', attachments.length);
+      console.log('📎 Attachments details:', attachments.map(f => ({ name: f.name, size: f.size, type: f.type })));
       console.log('Priority mapping:', {
         selectedId: formData.priority,
         selectedPriority,
@@ -301,12 +351,23 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
                 multiple
                 onChange={handleFileChange}
                 className="file-input"
-                id="file-input"
+                id="create-ticket-file-input"
                 disabled={attachments.length >= 2}
+                accept="*/*"
               />
               <label 
-                htmlFor="file-input" 
+                htmlFor="create-ticket-file-input" 
                 className={`file-input-label ${attachments.length >= 2 ? 'disabled' : ''}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  if (attachments.length >= 2) {
+                    return;
+                  }
+                  
+                  triggerFileSelection();
+                }}
               >
                 📎 Choose Files {attachments.length >= 2 ? '(Limit Reached)' : ''}
               </label>
