@@ -669,37 +669,6 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               <p>{currentTicket.description}</p>
             </div>
 
-            {/* Attachments Section - Always Show */}
-            <div className="ticket-attachments">
-              <h3>Attachments ({currentTicket.documents ? currentTicket.documents.length : 0})</h3>
-              {currentTicket.documents && currentTicket.documents.length > 0 ? (
-                <div className="attachments-list">
-                  {currentTicket.documents.map((doc: any, index: number) => (
-                    <div key={index} className="attachment-item">
-                      <span className="attachment-icon">📎</span>
-                      <span className="attachment-name">
-                        {doc.name || doc.filename || `Document ${index + 1}`}
-                      </span>
-                      {doc.url && (
-                        <a 
-                          href={doc.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="attachment-link"
-                        >
-                          View
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="no-attachments">
-                  <p>No attachments found for this ticket.</p>
-                </div>
-              )}
-            </div>
-
             <div className="ticket-meta">
               <div className="meta-item">
                 <span className="meta-label">User Name:</span>
@@ -786,6 +755,37 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                   {new Date(currentTicket.updatedAt).toLocaleDateString()}
                 </span>
               </div>
+            </div>
+
+            {/* Attachments Section - After Details */}
+            <div className="ticket-attachments">
+              <h3>Attachments ({currentTicket.documents ? currentTicket.documents.length : 0})</h3>
+              {currentTicket.documents && currentTicket.documents.length > 0 ? (
+                <div className="attachments-list">
+                  {currentTicket.documents.map((doc: any, index: number) => (
+                    <div key={index} className="attachment-item">
+                      <span className="attachment-icon">📎</span>
+                      <span className="attachment-name">
+                        {doc.name || doc.filename || `Document ${index + 1}`}
+                      </span>
+                      {doc.url && (
+                        <a 
+                          href={doc.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="attachment-link"
+                        >
+                          View
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="no-attachments">
+                  <p>No attachments found for this ticket.</p>
+                </div>
+              )}
             </div>
           </>
         )}
