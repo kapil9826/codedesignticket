@@ -102,7 +102,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     return styling;
   };
 
-  // Fetch tickets from API for sidebar
+  // Fetch tickets from API for sidebar - FIXED: Don't clear on ticket change
   const fetchTickets = async () => {
     try {
       setLoading(true);
@@ -144,6 +144,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
           });
           
           setTickets(transformedTickets);
+          console.log('✅ Sidebar: Successfully loaded', transformedTickets.length, 'tickets');
         } else {
           setTickets([]);
         }
@@ -158,7 +159,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     }
   };
 
-  // Fetch specific ticket details from API
+  // Fetch specific ticket details from API - FIXED: Better error handling
   const fetchTicketDetails = async (ticketId: string) => {
     try {
       setTicketLoading(true);
@@ -168,6 +169,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       
       let databaseId = ticketId;
       
+      // Try to resolve ticket ID
       if (typeof ticketId === 'string' && /^\d+$/.test(ticketId)) {
         databaseId = ticketId;
       } else {
@@ -233,17 +235,27 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         
         setCurrentTicket(transformedTicket);
         
-        // Load existing comments from notes
+        // Load existing comments from notes - FIXED: Better comment loading
         if (transformedTicket.notes && Array.isArray(transformedTicket.notes)) {
           const existingComments: Comment[] = transformedTicket.notes.map((note: any, index: number) => ({
-            id: `note-${index}`,
-            author: note.author || 'You',
-            message: note.content || note.message || note.note || 'No content',
+            id: `note-${note.id || index}`,
+            author: note.created_by || note.author || 'You',
+            message: note.note || note.content || note.message || 'No content',
             timestamp: note.created_at || note.timestamp || new Date().toISOString(),
             isAgent: note.is_agent || note.isAgent || false,
-            attachments: note.attachments || []
+            attachments: note.documents ? note.documents.map((doc: string, docIndex: number) => ({
+              id: `doc-${index}-${docIndex}`,
+              name: doc.split('/').pop() || 'Attachment',
+              size: 'Unknown',
+              type: doc.split('.').pop() || 'file',
+              url: doc
+            })) : []
           }));
           setComments(existingComments);
+          console.log('✅ Loaded', existingComments.length, 'comments from API');
+        } else {
+          setComments([]);
+          console.log('⚠️ No notes found for this ticket');
         }
       } else {
         setTicketError(result.error || 'Failed to load ticket details');
@@ -282,15 +294,21 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     }
   };
 
-  // File selection handler
+  // File selection handler - FIXED: Better file handling
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     
     if (files.length > 0) {
       setSelectedFiles(prev => {
         const newFiles = [...prev, ...files];
+        console.log('📎 Selected files:', newFiles.map(f => f.name));
         return newFiles;
       });
+    }
+    
+    // Clear the input value to allow selecting the same file again
+    if (event.target) {
+      event.target.value = '';
     }
   };
 
@@ -299,7 +317,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Add comment handler
+  // Add comment handler - FIXED: Better comment submission
   const handleAddComment = async () => {
     if (!newComment.trim() && selectedFiles.length === 0) {
       alert('Please enter a comment or select a file to attach.');
@@ -308,12 +326,16 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     
     try {
       setIsUploadingComment(true);
+      console.log('🚀 Adding comment:', { ticketId, comment: newComment, files: selectedFiles.length });
       
       const result = await addCommentFoolproof(ticketId, newComment, selectedFiles);
       
       if (result.success) {
+        console.log('✅ Comment added successfully!');
+        
+        // Create local comment for immediate display
         const newCommentObj: Comment = {
-          id: Date.now().toString(),
+          id: `local-${Date.now()}`,
           author: 'You',
           message: newComment,
           timestamp: new Date().toISOString(),
@@ -333,8 +355,11 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
+        
+        console.log('🎉 Comment with attachments added successfully!');
       } else {
-        alert('Failed to add comment. Please try again.');
+        console.log('❌ API call failed:', result.error);
+        alert(`Failed to add comment: ${result.error}`);
       }
     } catch (error) {
       console.error('❌ Error adding comment:', error);
@@ -361,12 +386,14 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
+  // FIXED: Load tickets only once on mount, not on every ticket change
   useEffect(() => {
     fetchTickets();
     fetchStatuses();
     fetchPriorities();
   }, []);
 
+  // FIXED: Only fetch ticket details when ticketId changes
   useEffect(() => {
     if (ticketId) {
       fetchTicketDetails(ticketId);
@@ -633,6 +660,33 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               <p>{currentTicket.description}</p>
             </div>
 
+            {/* FIXED: Added Attachments Section */}
+            {currentTicket.documents && currentTicket.documents.length > 0 && (
+              <div className="ticket-attachments">
+                <h3>Attachments ({currentTicket.documents.length})</h3>
+                <div className="attachments-list">
+                  {currentTicket.documents.map((doc: any, index: number) => (
+                    <div key={index} className="attachment-item">
+                      <span className="attachment-icon">📎</span>
+                      <span className="attachment-name">
+                        {doc.name || doc.filename || `Document ${index + 1}`}
+                      </span>
+                      {doc.url && (
+                        <a 
+                          href={doc.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="attachment-link"
+                        >
+                          View
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="ticket-meta">
               <div className="meta-item">
                 <span className="meta-label">User Name:</span>
@@ -642,6 +696,26 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               <div className="meta-item">
                 <span className="meta-label">User Email:</span>
                 <span className="meta-value">{currentTicket.userEmail || 'No email'}</span>
+              </div>
+              
+              <div className="meta-item">
+                <span className="meta-label">User Phone:</span>
+                <span className="meta-value">{currentTicket.userPhone || 'N/A'}</span>
+              </div>
+              
+              <div className="meta-item">
+                <span className="meta-label">Assigned To:</span>
+                <span className="meta-value">{currentTicket.assignedTo || 'Unassigned'}</span>
+              </div>
+              
+              <div className="meta-item">
+                <span className="meta-label">Department:</span>
+                <span className="meta-value">{currentTicket.department || 'General'}</span>
+              </div>
+              
+              <div className="meta-item">
+                <span className="meta-label">Category:</span>
+                <span className="meta-value">{currentTicket.category || 'General'}</span>
               </div>
               
               <div className="meta-item">
@@ -684,6 +758,20 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                     {currentTicket.priority_name || currentTicket.priority}
                   </span>
                 </div>
+              </div>
+              
+              <div className="meta-item">
+                <span className="meta-label">Created:</span>
+                <span className="meta-value">
+                  {new Date(currentTicket.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+              
+              <div className="meta-item">
+                <span className="meta-label">Updated:</span>
+                <span className="meta-value">
+                  {new Date(currentTicket.updatedAt).toLocaleDateString()}
+                </span>
               </div>
             </div>
           </>
