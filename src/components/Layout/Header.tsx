@@ -14,6 +14,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout, onCreateTicket }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // Initialize with user data from localStorage if available
   const getInitialUserName = () => {
     try {
@@ -118,7 +119,13 @@ const Header: React.FC<HeaderProps> = ({ onLogout, onCreateTicket }) => {
     };
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+    setShowUserMenu(false); // Close user menu when showing confirmation
+  };
+
+  const handleLogoutConfirm = async () => {
+    setShowLogoutConfirm(false);
     setIsLoggingOut(true);
     try {
       await ApiService.logout();
@@ -137,6 +144,10 @@ const Header: React.FC<HeaderProps> = ({ onLogout, onCreateTicket }) => {
     } finally {
       setIsLoggingOut(false);
     }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutConfirm(false);
   };
 
   return (
@@ -181,7 +192,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout, onCreateTicket }) => {
                   My Profile
                 </Link>
                 <button 
-                  onClick={handleLogout} 
+                  onClick={handleLogoutClick} 
                   className="dropdown-item logout"
                   disabled={isLoggingOut}
                 >
@@ -197,6 +208,43 @@ const Header: React.FC<HeaderProps> = ({ onLogout, onCreateTicket }) => {
           </div>
         </div>
       </div>
+      
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="logout-confirmation-overlay">
+          <div className="logout-confirmation-modal">
+            <div className="logout-confirmation-header">
+              <div className="logout-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16,17 21,12 16,7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </div>
+              <h3>Sign Out Confirmation</h3>
+            </div>
+            <div className="logout-confirmation-body">
+              <p>Are you sure you want to log out? Click 'Yes' to confirm or 'No' to stay logged in.</p>
+            </div>
+            <div className="logout-confirmation-actions">
+              <button 
+                className="logout-cancel-btn"
+                onClick={handleLogoutCancel}
+                disabled={isLoggingOut}
+              >
+                No, Cancel
+              </button>
+              <button 
+                className="logout-confirm-btn"
+                onClick={handleLogoutConfirm}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? 'Logging out...' : "Yes, I'm sure"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
     </header>
   );

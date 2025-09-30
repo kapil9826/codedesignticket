@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ApiService from '../../services/api';
 import { addCommentFoolproof } from '../../services/api-foolproof';
 import './TicketDetail.css';
@@ -47,6 +47,7 @@ interface TicketDetailProps {
 const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicketChange }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [newComment, setNewComment] = useState('');
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +57,8 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
   const [ticketError, setTicketError] = useState<string>('');
   const [showAttachments, setShowAttachments] = useState(true);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [fileInputRef, setFileInputRef] = useState<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingComment, setIsUploadingComment] = useState(false);
 
   const statusOptions = [
     { value: 'all', label: 'All' },
@@ -66,6 +68,13 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     { value: 'Overdue', label: 'Overdue' },
     { value: 'Assigned', label: 'Assigned' },
     { value: 'Suspend', label: 'Suspend' }
+  ];
+
+  const priorityOptions = [
+    { value: 'all', label: 'All Priority' },
+    { value: 'High', label: 'High' },
+    { value: 'Medium', label: 'Medium' },
+    { value: 'Low', label: 'Low' }
   ];
 
   // Fetch tickets from API
@@ -570,8 +579,25 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
   }, []);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📎 handleFileSelect called');
+    console.log('📎 Event target:', event.target);
+    console.log('📎 Files:', event.target.files);
+    
     const files = Array.from(event.target.files || []);
-    setSelectedFiles(prev => [...prev, ...files]);
+    console.log('📎 Files selected:', files.length, files.map(f => f.name));
+    
+    if (files.length > 0) {
+      setSelectedFiles(prev => {
+        const newFiles = [...prev, ...files];
+        console.log('📎 Updated selected files:', newFiles.length, newFiles.map(f => f.name));
+        return newFiles;
+      });
+    }
+    
+    // Clear the input value to allow selecting the same file again
+    if (event.target) {
+      event.target.value = '';
+    }
   };
 
   const removeFile = (index: number) => {
@@ -580,7 +606,13 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
 
   const handleAddComment = async () => {
     console.log('🚀 ===== FOOLPROOF ADD COMMENT =====');
-    console.log('🔍 Input:', { ticketId, comment: newComment, files: selectedFiles.length });
+    console.log('🔍 Input:', { 
+      ticketId, 
+      comment: newComment, 
+      files: selectedFiles.length,
+      fileNames: selectedFiles.map(f => f.name),
+      fileSizes: selectedFiles.map(f => f.size)
+    });
     
     // Validate input
     if (!newComment.trim() && selectedFiles.length === 0) {
@@ -589,6 +621,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     }
     
     try {
+      setIsUploadingComment(true);
       // Call the FOOLPROOF API
       console.log('🔄 Calling foolproof API...');
       const result = await addCommentFoolproof(ticketId, newComment.trim(), selectedFiles);
@@ -597,18 +630,26 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         console.log('✅ Comment added successfully!');
         
         // Create local comment for immediate display
+        const attachmentData = selectedFiles.map(file => ({
+          id: `att_${Date.now()}`,
+          name: file.name,
+          size: `${(file.size / 1024 / 1024).toFixed(1)}MB`,
+          type: file.type.split('/')[1] || 'file'
+        }));
+        
+        console.log('📎 Creating local comment with attachments:', {
+          selectedFiles: selectedFiles.length,
+          attachmentData: attachmentData.length,
+          attachmentNames: attachmentData.map(a => a.name)
+        });
+        
         const localComment: Comment = {
           id: `local_${Date.now()}`,
           author: 'You',
           message: newComment.trim(),
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           isAgent: false,
-          attachments: selectedFiles.map(file => ({
-            id: `att_${Date.now()}`,
-            name: file.name,
-            size: `${(file.size / 1024 / 1024).toFixed(1)}MB`,
-            type: file.type.split('/')[1] || 'file'
-          }))
+          attachments: attachmentData
         };
         
         // Add to comments immediately
@@ -617,9 +658,11 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         // Clear form
         setNewComment('');
         setSelectedFiles([]);
-        if (fileInputRef) {
-          fileInputRef.value = '';
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
         }
+        
+        console.log('🎉 Comment with attachments added successfully!');
         
         console.log('🎉 Comment added and displayed locally!');
         
@@ -676,6 +719,8 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     } catch (error) {
       console.error('❌ Error adding comment:', error);
       alert(`Error adding comment: ${error}`);
+    } finally {
+      setIsUploadingComment(false);
     }
   };
 
@@ -687,13 +732,14 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     }
   };
 
-  // Filter tickets based on search and status
+  // Filter tickets based on search, status, and priority
   const filteredTickets = tickets.filter(ticket => {
     const matchesSearch = ticket.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          ticket.issue.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          ticket.priority.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
+    return matchesSearch && matchesStatus && matchesPriority;
   });
 
   return (
@@ -725,6 +771,19 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
             ))}
           </select>
         </div>
+        <div className="sidebar-filter">
+          <select 
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className="priority-dropdown"
+          >
+            {priorityOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="sidebar-tickets">
           {loading && (
             <div className="sidebar-loading">
@@ -739,9 +798,25 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
             </div>
           )}
           
-          {!loading && !error && filteredTickets.length === 0 && (
+          {!loading && !error && filteredTickets.length === 0 && tickets.length > 0 && (
             <div className="sidebar-no-tickets">
-              <p>No tickets found</p>
+              <div className="sidebar-no-records-icon">🔍</div>
+              <h4>No records found</h4>
+              <p>No tickets match your current search or filter criteria.</p>
+              <div className="sidebar-no-records-suggestions">
+                <p>Try:</p>
+                <ul>
+                  <li>Clearing your search term</li>
+                  <li>Changing the status filter</li>
+                  <li>Using different keywords</li>
+                </ul>
+              </div>
+            </div>
+          )}
+          
+          {!loading && !error && tickets.length === 0 && (
+            <div className="sidebar-no-tickets">
+              <p>No tickets available</p>
             </div>
           )}
           
@@ -753,14 +828,16 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
             >
               <div className="sidebar-ticket-id">{ticket.id}</div>
               <div className="sidebar-ticket-issue">{ticket.issue}</div>
-              <div className={`sidebar-ticket-priority priority-${ticket.priority.toLowerCase()}`}>
-                {ticket.priority}
-              </div>
-              <div 
-                className={`sidebar-ticket-status status-${ticket.status.toLowerCase().replace('-', '')}`}
-                style={getStatusStyling(ticket.status)}
-              >
-                {ticket.status}
+              <div className="sidebar-ticket-badges">
+                <div className={`sidebar-ticket-priority priority-${ticket.priority.toLowerCase()}`}>
+                  {ticket.priority}
+                </div>
+                <div 
+                  className={`sidebar-ticket-status status-${ticket.status.toLowerCase().replace('-', '')}`}
+                  style={getStatusStyling(ticket.status)}
+                >
+                  {ticket.status}
+                </div>
               </div>
             </div>
           ))}
@@ -774,7 +851,16 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         </div>
 
         <div className="comments-list">
-          {comments.map((comment) => (
+          {comments.map((comment) => {
+            console.log('🔍 Rendering comment:', {
+              id: comment.id,
+              author: comment.author,
+              hasAttachments: !!comment.attachments,
+              attachmentCount: comment.attachments?.length || 0,
+              attachmentNames: comment.attachments?.map(a => a.name) || []
+            });
+            
+            return (
             <div key={comment.id} className="comment-item">
               <div className="comment-header">
                 <div className="comment-author">{comment.author}</div>
@@ -806,7 +892,8 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="add-comment-section">
@@ -845,11 +932,24 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                 type="file"
                 multiple
                 onChange={handleFileSelect}
-                ref={setFileInputRef}
+                ref={fileInputRef}
                 style={{ display: 'none' }}
                 id="file-input"
+                accept="*/*"
               />
-              <label htmlFor="file-input" className="attachment-btn">
+              <label 
+                htmlFor="file-input" 
+                className="attachment-btn"
+                onClick={() => {
+                  console.log('📎 Attachment button clicked');
+                  if (fileInputRef.current) {
+                    console.log('📎 File input ref exists, triggering click');
+                    fileInputRef.current.click();
+                  } else {
+                    console.log('❌ File input ref is null');
+                  }
+                }}
+              >
                 📎 Attach Files
               </label>
               <button 
@@ -861,8 +961,9 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                   handleAddComment();
                 }}
                 type="button"
+                disabled={isUploadingComment}
               >
-                Add Comment
+                {isUploadingComment ? 'Uploading...' : 'Send Comment'}
               </button>
             </div>
           </div>
@@ -901,19 +1002,16 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
           <div className="meta-item">
             <span className="meta-label">User Name:</span>
             <span className="meta-value">{ticket.userName || 'Unknown User'}</span>
-            {console.log('🔍 Displaying user name:', ticket.userName)}
           </div>
           
           <div className="meta-item">
             <span className="meta-label">User Email:</span>
             <span className="meta-value">{ticket.userEmail || 'No email'}</span>
-            {console.log('🔍 Displaying user email:', ticket.userEmail)}
           </div>
           
           <div className="meta-item">
             <span className="meta-label">User Phone:</span>
             <span className="meta-value">{ticket.userPhone || 'No phone'}</span>
-            {console.log('🔍 Displaying user phone:', ticket.userPhone)}
           </div>
           
           <div className="meta-item">

@@ -108,25 +108,79 @@ export const addCommentFoolproof = async (ticketId: string, comment: string, att
     // Add attachments if any
     if (attachments && attachments.length > 0) {
       console.log('📎 Adding', attachments.length, 'attachments...');
+      
+      // Try multiple approaches for file upload
       attachments.forEach((file, index) => {
+        console.log('📎 Adding file:', {
+          index,
+          name: file.name,
+          size: file.size,
+          type: file.type
+        });
+        
+        // Approach 1: Standard file upload
         formData.append(`attachment_${index}`, file);
+        formData.append(`file_${index}`, file);
+        formData.append(`document_${index}`, file);
+        
+        // Approach 2: Array format
+        formData.append('attachments[]', file);
+        formData.append('files[]', file);
+        formData.append('documents[]', file);
+        
+        // Approach 3: With explicit field names
+        formData.append(`attachments[${index}]`, file);
+        formData.append(`files[${index}]`, file);
+        formData.append(`documents[${index}]`, file);
+        
+        // Approach 4: Single file field (for first file)
+        if (index === 0) {
+          formData.append('attachment', file);
+          formData.append('file', file);
+          formData.append('document', file);
+        }
       });
+      
+      // Also try adding a count field
+      formData.append('attachment_count', attachments.length.toString());
+      formData.append('file_count', attachments.length.toString());
+      formData.append('document_count', attachments.length.toString());
     }
     
     console.log('📝 Form data prepared');
     
+    // Debug: Log all form data entries
+    console.log('🔍 FormData contents:');
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+      } else {
+        console.log(`  ${key}: ${value}`);
+      }
+    }
+    
     // STEP 3: CALL API - SINGLE, SIMPLE CALL
     console.log('🔍 Step 3: Calling add-ticket-note API...');
     
+    // Try the API call
     const response = await fetch(`${API_BASE_URL}/add-ticket-note`, {
       method: 'POST',
       body: formData,
     });
     
     console.log('📡 API Response Status:', response.status);
+    console.log('📡 API Response Headers:', Object.fromEntries(response.headers.entries()));
     
     const result = await response.json();
     console.log('📄 API Response:', result);
+    
+    // Check if the response indicates file upload issues
+    if (result.status === '1' && result.data) {
+      console.log('📄 API Response Data:', result.data);
+      if (result.data.documents === null || result.data.documents === undefined) {
+        console.log('⚠️ Warning: Documents field is null in API response');
+      }
+    }
     
     if (result.status === '1') {
       console.log('✅ Comment added successfully!');
@@ -142,4 +196,30 @@ export const addCommentFoolproof = async (ticketId: string, comment: string, att
   }
 };
 
-export default { addCommentFoolproof };
+// Test function to check if API supports file uploads
+export const testFileUpload = async (ticketId: string, file: File) => {
+  console.log('🧪 Testing file upload with API...');
+  
+  const formData = new FormData();
+  formData.append('support_tickets_id', ticketId);
+  formData.append('note', 'Test file upload');
+  formData.append('user_name', getUserName());
+  formData.append('access_token', getAuthToken() || '');
+  formData.append('test_file', file);
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/add-ticket-note`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    const result = await response.json();
+    console.log('🧪 Test upload result:', result);
+    return result;
+  } catch (error) {
+    console.error('🧪 Test upload error:', error);
+    return { success: false, error };
+  }
+};
+
+export default { addCommentFoolproof, testFileUpload };

@@ -115,7 +115,22 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    const currentCount = attachments.length;
+    const newFilesCount = files.length;
+    const totalCount = currentCount + newFilesCount;
+    
+    if (totalCount > 2) {
+      setError(`You can only upload a maximum of 2 attachments. You currently have ${currentCount} attachment(s) and tried to add ${newFilesCount} more. Please remove some attachments first.`);
+      return;
+    }
+    
+    if (newFilesCount > 2) {
+      setError('You can only select up to 2 files at once.');
+      return;
+    }
+    
     setAttachments(prev => [...prev, ...files]);
+    setError(''); // Clear any previous errors
   };
 
   const removeAttachment = (index: number) => {
@@ -266,7 +281,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
                 onChange={handleInputChange}
                 required
                 placeholder="Describe the issue in detail"
-                rows={3}
+                rows={2}
               />
             </div>
 
@@ -274,6 +289,11 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
 
           <div className="form-section">
             <h3>Attachments</h3>
+            <div className="attachment-info">
+              <p className="attachment-limit-message">
+                📎 You can upload up to 2 attachments (Maximum 2 files allowed)
+              </p>
+            </div>
             <div className="form-group">
               <label>Add Files</label>
               <input
@@ -282,15 +302,24 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
                 onChange={handleFileChange}
                 className="file-input"
                 id="file-input"
+                disabled={attachments.length >= 2}
               />
-              <label htmlFor="file-input" className="file-input-label">
-                📎 Choose Files
+              <label 
+                htmlFor="file-input" 
+                className={`file-input-label ${attachments.length >= 2 ? 'disabled' : ''}`}
+              >
+                📎 Choose Files {attachments.length >= 2 ? '(Limit Reached)' : ''}
               </label>
+              {attachments.length >= 2 && (
+                <p className="limit-reached-message">
+                  ⚠️ Maximum of 2 attachments reached. Remove an attachment to add more.
+                </p>
+              )}
             </div>
 
             {attachments.length > 0 && (
               <div className="attachments-list">
-                <h4>Selected Files ({attachments.length})</h4>
+                <h4>Selected Files ({attachments.length}/2)</h4>
                 {attachments.map((file, index) => (
                   <div key={index} className="attachment-item">
                     <span className="file-name">{file.name}</span>
