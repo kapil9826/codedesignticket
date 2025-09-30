@@ -237,7 +237,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         if (transformedTicket.notes && Array.isArray(transformedTicket.notes)) {
           const existingComments: Comment[] = transformedTicket.notes.map((note: any, index: number) => ({
             id: `note-${index}`,
-            author: note.author || 'System',
+            author: note.author || 'You',
             message: note.content || note.message || note.note || 'No content',
             timestamp: note.created_at || note.timestamp || new Date().toISOString(),
             isAgent: note.is_agent || note.isAgent || false,
@@ -292,6 +292,11 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         return newFiles;
       });
     }
+  };
+
+  // Remove file handler
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   // Add comment handler
@@ -390,213 +395,22 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
 
   return (
     <div className="ticket-detail-container">
-      {/* Main Content Area */}
-      <div className="ticket-detail-content">
-        {ticketLoading ? (
-          <SkeletonLoader type="ticket-detail" />
-        ) : ticketError ? (
-          <div className="error-message">
-            <h3>Error Loading Ticket</h3>
-            <p>{ticketError}</p>
-            <button onClick={() => fetchTicketDetails(ticketId)}>Retry</button>
-          </div>
-        ) : currentTicket ? (
-          <>
-            {/* Ticket Header */}
-            <div className="ticket-header">
-              <div className="ticket-title-section">
-                <h1 className="ticket-title">{currentTicket.title}</h1>
-                <div className="ticket-meta-info">
-                  <span className="ticket-id">#{currentTicket.id}</span>
-                  <span className="ticket-date">
-                    Created: {new Date(currentTicket.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-              <button onClick={onClose} className="close-button">×</button>
-            </div>
-            
-            {/* Ticket Status and Priority */}
-            <div className="ticket-status-priority">
-              <div className="status-section">
-                <label>Status:</label>
-                <span 
-                  className={`status-badge status-${currentTicket.status.toLowerCase()}`}
-                  style={getStatusStyling(currentTicket)}
-                >
-                  {currentTicket.status_name || currentTicket.status}
-                </span>
-              </div>
-              <div className="priority-section">
-                <label>Priority:</label>
-                <span 
-                  className={`priority-badge priority-${currentTicket.priority.toLowerCase()}`}
-                  style={getPriorityStyling(currentTicket)}
-                >
-                  {currentTicket.priority_name || currentTicket.priority}
-                </span>
-              </div>
-            </div>
-            
-            {/* Ticket Information */}
-            <div className="ticket-info-grid">
-              <div className="info-item">
-                <label>Assigned To:</label>
-                <span>{currentTicket.assignedTo}</span>
-              </div>
-              <div className="info-item">
-                <label>Department:</label>
-                <span>{currentTicket.department}</span>
-              </div>
-              <div className="info-item">
-                <label>Category:</label>
-                <span>{currentTicket.category}</span>
-              </div>
-              <div className="info-item">
-                <label>User:</label>
-                <span>{currentTicket.userName}</span>
-              </div>
-              <div className="info-item">
-                <label>Email:</label>
-                <span>{currentTicket.userEmail}</span>
-              </div>
-              <div className="info-item">
-                <label>Phone:</label>
-                <span>{currentTicket.userPhone}</span>
-              </div>
-            </div>
-            
-            {/* Ticket Description */}
-            <div className="ticket-description-section">
-              <h3>Description</h3>
-              <div className="description-content">
-                {currentTicket.description}
-              </div>
-            </div>
-            
-            {/* Attachments Section */}
-            {currentTicket.documents && currentTicket.documents.length > 0 && (
-              <div className="attachments-section">
-                <h3>Attachments</h3>
-                <div className="attachments-list">
-                  {currentTicket.documents.map((doc: any, index: number) => (
-                    <div key={index} className="attachment-item">
-                      📎 {doc.name || doc.filename || `Document ${index + 1}`}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Comments Section */}
-            <div className="comments-section">
-              <h3>Comments ({comments.length})</h3>
-              
-              {/* Comments List */}
-              <div className="comments-list">
-                {comments.length === 0 ? (
-                  <div className="no-comments">No comments yet</div>
-                ) : (
-                  comments.map(comment => (
-                    <div key={comment.id} className={`comment ${comment.isAgent ? 'agent' : 'user'}`}>
-                      <div className="comment-header">
-                        <span className="comment-author">{comment.author}</span>
-                        <span className="comment-time">
-                          {new Date(comment.timestamp).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="comment-content">{comment.message}</div>
-                      {comment.attachments && comment.attachments.length > 0 && (
-                        <div className="comment-attachments">
-                          {comment.attachments.map(attachment => (
-                            <div key={attachment.id} className="attachment-item">
-                              📎 {attachment.name} ({attachment.size})
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-              
-              {/* Add Comment Form */}
-              <div className="add-comment-form">
-                <div className="comment-input-section">
-                  <textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Add a comment... (Ctrl+Enter to send)"
-                    className="comment-textarea"
-                    rows={3}
-                  />
-                  
-                  {/* Selected Files Display */}
-                  {selectedFiles.length > 0 && (
-                    <div className="selected-files">
-                      {selectedFiles.map((file, index) => (
-                        <div key={index} className="file-item">
-                          📎 {file.name} ({(file.size / 1024).toFixed(1)}KB)
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="comment-actions">
-                  <input
-                    type="file"
-                    multiple
-                    onChange={handleFileSelect}
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    id="file-input"
-                    accept="*/*"
-                  />
-                  <label 
-                    htmlFor="file-input" 
-                    className="attachment-btn"
-                  >
-                    📎 Attach Files
-                  </label>
-                  
-                  <button 
-                    onClick={handleAddComment}
-                    disabled={isUploadingComment || (!newComment.trim() && selectedFiles.length === 0)}
-                    className="add-comment-btn"
-                  >
-                    {isUploadingComment ? 'Sending...' : 'Send Comment'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="no-ticket">
-            <h3>No Ticket Selected</h3>
-            <p>Please select a ticket to view its details.</p>
-          </div>
-        )}
-      </div>
-      
-      {/* Sidebar */}
-      <div className="ticket-sidebar">
+      {/* Ticket List Sidebar - Left */}
+      <div className="ticket-list-sidebar">
         <div className="sidebar-header">
-          <h3>All Tickets</h3>
+          <button className="back-btn" onClick={onClose}>←</button>
         </div>
-        
-        {/* Sidebar Filters */}
-        <div className="sidebar-filters">
+        <div className="sidebar-search">
           <input
             type="text"
             placeholder="Search tickets..."
+            className="sidebar-search-input"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="sidebar-search-input"
           />
-          
-          <select
+        </div>
+        <div className="sidebar-filter">
+          <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="status-dropdown"
@@ -607,8 +421,9 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               </option>
             ))}
           </select>
-          
-          <select
+        </div>
+        <div className="sidebar-filter">
+          <select 
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
             className="priority-dropdown"
@@ -620,45 +435,259 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
             ))}
           </select>
         </div>
-        
-        {/* Sidebar Tickets List */}
         <div className="sidebar-tickets">
-          {loading ? (
-            <div className="loading-tickets">Loading tickets...</div>
-          ) : error ? (
-            <div className="error-tickets">Error loading tickets</div>
-          ) : filteredTickets.length === 0 ? (
-            <div className="no-tickets">No tickets found</div>
-          ) : (
-            filteredTickets.map(ticket => (
-              <div 
-                key={ticket.id} 
-                className={`sidebar-ticket ${ticket.id === ticketId ? 'active' : ''}`}
-                onClick={() => onTicketChange(ticket.id)}
-              >
-                <div className="sidebar-ticket-header">
-                  <div className="sidebar-ticket-id">#{ticket.id}</div>
-                  <div className="sidebar-ticket-time">{ticket.time}</div>
+          {loading && (
+            <div className="sidebar-loading">
+              <SkeletonLoader type="sidebar-ticket" count={3} />
+            </div>
+          )}
+          
+          {error && (
+            <div className="sidebar-error">
+              <p>⚠️ {error}</p>
+            </div>
+          )}
+          
+          {!loading && !error && filteredTickets.length === 0 && tickets.length > 0 && (
+            <div className="sidebar-no-tickets">
+              <div className="sidebar-no-records-icon">🔍</div>
+              <h4>No records found</h4>
+              <p>No tickets match your current search or filter criteria.</p>
+              <div className="sidebar-no-records-suggestions">
+                <p>Try:</p>
+                <ul>
+                  <li>Clearing your search term</li>
+                  <li>Changing the status filter</li>
+                  <li>Using different keywords</li>
+                </ul>
+              </div>
+            </div>
+          )}
+          
+          {!loading && !error && tickets.length === 0 && (
+            <div className="sidebar-no-tickets">
+              <p>No tickets available</p>
+            </div>
+          )}
+          
+          {!loading && !error && filteredTickets.map((ticket) => (
+            <div 
+              key={ticket.id} 
+              className={`sidebar-ticket-item ${ticket.id === ticketId ? 'active' : ''}`}
+              onClick={() => onTicketChange(ticket.id)}
+            >
+              <div className="sidebar-ticket-id">{ticket.id}</div>
+              <div className="sidebar-ticket-issue">{ticket.issue}</div>
+              <div className="sidebar-ticket-badges">
+                <div 
+                  className="sidebar-ticket-priority"
+                  style={getPriorityStyling(ticket)}
+                >
+                  {ticket.priority_name || ticket.priority || 'Null'}
                 </div>
-                <div className="sidebar-ticket-issue">{ticket.issue}</div>
-                <div className="sidebar-ticket-badges">
-                  <div 
-                    className="sidebar-ticket-priority"
-                    style={getPriorityStyling(ticket)}
-                  >
-                    {ticket.priority_name || ticket.priority || 'Null'}
-                  </div>
-                  <div 
-                    className={`sidebar-ticket-status status-${ticket.status.toLowerCase().replace('-', '')}`}
-                    style={getStatusStyling(ticket)}
-                  >
-                    {ticket.status_name || ticket.status || 'Null'}
-                  </div>
+                <div 
+                  className={`sidebar-ticket-status status-${ticket.status.toLowerCase().replace('-', '')}`}
+                  style={getStatusStyling(ticket)}
+                >
+                  {ticket.status_name || ticket.status || 'Null'}
                 </div>
               </div>
-            ))
-          )}
+            </div>
+          ))}
         </div>
+      </div>
+
+      {/* Comments Section - Middle */}
+      <div className="comments-section">
+        <div className="comments-header">
+          <h3>Comments ({comments.length})</h3>
+        </div>
+
+        <div className="comments-list">
+          {ticketLoading && comments.length === 0 && (
+            <SkeletonLoader type="comment" count={2} />
+          )}
+          {comments.map((comment) => (
+            <div key={comment.id} className="comment-item">
+              <div className="comment-header">
+                <div className="comment-author">{comment.author}</div>
+                <div className="comment-timestamp">{comment.timestamp}</div>
+              </div>
+              <div className="comment-message">{comment.message}</div>
+              {comment.attachments && comment.attachments.length > 0 && (
+                <div className="comment-attachments">
+                  <div className="attachments-label">{comment.attachments.length} Attachments</div>
+                  {comment.attachments.map((attachment) => (
+                    <div key={attachment.id} className="comment-attachment">
+                      <span className="attachment-icon">📎</span>
+                      {attachment.url ? (
+                        <a 
+                          href={attachment.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="attachment-link"
+                          style={{color: '#3b82f6', textDecoration: 'underline' }}
+                        >
+                          {attachment.name}
+                        </a>
+                      ) : (
+                      <span className="attachment-name">{attachment.name}</span>
+                      )}
+                      <span className="attachment-size">({attachment.size})</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="add-comment-section">
+          <h4>Add Comment</h4>
+          {selectedFiles.length > 0 && (
+            <div className="selected-files">
+              {selectedFiles.map((file, index) => (
+                <div key={index} className="selected-file">
+                  <span className="file-icon">📎</span>
+                  <span className="file-name">{file.name}</span>
+                  <span className="file-size">({(file.size / 1024 / 1024).toFixed(1)}MB)</span>
+                  <button 
+                    className="remove-file-btn"
+                    onClick={() => removeFile(index)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="comment-form">
+            <textarea
+              placeholder="Write your comment here..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="comment-textarea"
+              rows={1}
+              data-gramm="false"
+              data-gramm_editor="false"
+              data-enable-grammarly="false"
+            />
+            <div className="comment-actions">
+              <input
+                type="file"
+                multiple
+                onChange={handleFileSelect}
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                id="file-input"
+                accept="*/*"
+              />
+              <label 
+                htmlFor="file-input" 
+                className="attachment-btn"
+              >
+                📎 Attach Files
+              </label>
+              <button 
+                className="add-comment-btn" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleAddComment();
+                }}
+                type="button"
+                disabled={isUploadingComment}
+              >
+                {isUploadingComment ? 'Uploading...' : 'Send Comment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Ticket Details Section - Right Side */}
+      <div className="ticket-detail-section">
+        {ticketLoading && (
+          <div className="ticket-loading">
+            <SkeletonLoader type="ticket-detail" count={1} />
+          </div>
+        )}
+        
+        {ticketError && (
+          <div className="ticket-error">
+            <p>⚠️ {ticketError}</p>
+          </div>
+        )}
+        
+        {!ticketLoading && !ticketError && currentTicket && (
+          <>
+            <div className="ticket-header">
+              <div className="ticket-id">#{currentTicket.id}</div>
+              <button className="close-btn" onClick={onClose}>×</button>
+            </div>
+            
+            <h1 className="ticket-title">{currentTicket.title}</h1>
+            
+            <div className="ticket-description">
+              <p>{currentTicket.description}</p>
+            </div>
+
+            <div className="ticket-meta">
+              <div className="meta-item">
+                <span className="meta-label">User Name:</span>
+                <span className="meta-value">{currentTicket.userName || 'Unknown User'}</span>
+              </div>
+              
+              <div className="meta-item">
+                <span className="meta-label">User Email:</span>
+                <span className="meta-value">{currentTicket.userEmail || 'No email'}</span>
+              </div>
+              
+              <div className="meta-item">
+                <span className="meta-label">Status:</span>
+                <div className="status-container">
+                  <span className="status-icon">●</span>
+                  <span 
+                    className="status-text"
+                    style={{
+                      ...getStatusStyling(currentTicket),
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.55rem',
+                      fontWeight: '600',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}
+                  >
+                    {currentTicket.status_name || currentTicket.status}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="meta-item">
+                <span className="meta-label">Priority:</span>
+                <div className="priority-container">
+                  <span className="priority-icon">●</span>
+                  <span 
+                    className="priority-text"
+                    style={{
+                      ...getPriorityStyling(currentTicket),
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.55rem',
+                      fontWeight: '600',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}
+                  >
+                    {currentTicket.priority_name || currentTicket.priority}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
