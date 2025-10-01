@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { CgAttachment } from "react-icons/cg";
 import SkeletonLoader from '../../components/SkeletonLoader/SkeletonLoader';
 import ApiService from '../../services/api';
 import { addCommentFoolproof } from '../../services/api-foolproof';
@@ -650,7 +651,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                   <div className="comment-attachments">
                     {comment.attachments.map((attachment) => (
                       <div key={attachment.id} className="attachment-item">
-                        <span className="attachment-icon">📎</span>
+                        <span className="attachment-icon"><CgAttachment /></span>
                         {attachment.url ? (
                           <a 
                             href={attachment.url} 
@@ -680,7 +681,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
             <div className="selected-files">
               {selectedFiles.map((file, index) => (
                 <div key={index} className="selected-file">
-                  <span className="file-icon">📎</span>
+                  <span className="file-icon"><CgAttachment /></span>
                   <span className="file-name">{file.name}</span>
                   <span className="file-size">({(file.size / 1024 / 1024).toFixed(1)}MB)</span>
                   <button 
@@ -707,9 +708,6 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
             />
             <div className="comment-actions">
               <div className="formatting-icons">
-                <button className="formatting-icon" title="Format text">
-                  A
-                </button>
                 <input
                   type="file"
                   multiple
@@ -724,17 +722,8 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                   className="formatting-icon"
                   title="Attach files"
                 >
-                  📎
+                  <CgAttachment />
                 </label>
-                <button className="formatting-icon" title="Add link">
-                  🔗
-                </button>
-                <button className="formatting-icon" title="Add emoji">
-                  😊
-                </button>
-                <button className="formatting-icon" title="Voice message">
-                  🎤
-                </button>
               </div>
               <button 
                 className="add-comment-btn" 
@@ -789,20 +778,20 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
 
             <div className="ticket-meta">
               <div className="meta-item">
-                <span className="meta-label">User Name:</span>
+                <span className="meta-label"> Name</span>
                 <span className="meta-value">{currentTicket.userName || 'Unknown User'}</span>
               </div>
               
               <div className="meta-item">
-                <span className="meta-label">User Email:</span>
+                <span className="meta-label"> Email</span>
                 <span className="meta-value">{currentTicket.userEmail || 'No email'}</span>
               </div>
             
               
               <div className="meta-item">
-                <span className="meta-label">Status:</span>
+                <span className="meta-label">Status</span>
                 <div className="status-container">
-                  <span className="status-icon">●</span>
+                  {/* <span className="status-icon">●</span> */}
                   <span 
                     className="status-text"
                     style={{
@@ -821,14 +810,14 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               </div>
               
               <div className="meta-item">
-                <span className="meta-label">Priority:</span>
+                <span className="meta-label">Priority</span>
                 <div className="priority-container">
-                  <span className="priority-icon">●</span>
+                  {/* <span className="priority-icon">●</span> */}
                   <span 
                     className="priority-text"
                     style={{
                       ...getPriorityStyling(currentTicket),
-                      padding: '4px 8px',
+                      padding: '5px 10px',
                       borderRadius: '4px',
                       fontSize: '0.55rem',
                       fontWeight: '600',
@@ -842,14 +831,14 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               </div>
               
               <div className="meta-item">
-                <span className="meta-label">Created:</span>
+                <span className="meta-label">Created</span>
                 <span className="meta-value">
                   {new Date(currentTicket.createdAt).toLocaleDateString()}
                 </span>
               </div>
               
               <div className="meta-item">
-                <span className="meta-label">Updated:</span>
+                <span className="meta-label">Last Action</span>
                 <span className="meta-value">
                   {new Date(currentTicket.updatedAt).toLocaleDateString()}
                 </span>
@@ -861,24 +850,45 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               <h3>Attachments ({currentTicket.documents ? currentTicket.documents.length : 0})</h3>
               {currentTicket.documents && currentTicket.documents.length > 0 ? (
                 <div className="attachments-list">
-                  {currentTicket.documents.map((doc: any, index: number) => (
-                    <div key={index} className="attachment-item">
-                      <span className="attachment-icon">📎</span>
-                      <span className="attachment-name">
-                        {doc.name || doc.filename || `Document ${index + 1}`}
-                      </span>
-                      {doc.url && (
-                        <a 
-                          href={doc.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="attachment-link"
-                        >
-                          View
-                        </a>
-                      )}
-                    </div>
-                  ))}
+                  {currentTicket.documents.map((docUrl: string, index: number) => {
+                    // Extract file name from URL
+                    const getFileNameFromUrl = (url: string) => {
+                      try {
+                        // Extract filename from URL path
+                        const urlPath = new URL(url).pathname;
+                        const fileName = urlPath.split('/').pop() || '';
+                        
+                        // Remove timestamp prefix if it exists (e.g., "1759310135_sw.js" -> "sw.js")
+                        const cleanFileName = fileName.replace(/^\d+_/, '');
+                        
+                        return cleanFileName || `Attachment ${index + 1}`;
+                      } catch (error) {
+                        console.log('Error parsing URL:', url, error);
+                        return `Attachment ${index + 1}`;
+                      }
+                    };
+
+                    const fileName = getFileNameFromUrl(docUrl);
+
+                    return (
+                      <div key={index} className="attachment-item">
+                        <span className="attachment-icon"><CgAttachment /></span>
+                        <div className="attachment-content">
+                          <a 
+                            href={docUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="attachment-link"
+                          >
+                            {fileName}
+                          </a>
+                          <span className="attachment-size">
+                            (Click to view)
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="no-attachments">

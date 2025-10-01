@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { CgAttachment } from "react-icons/cg";
 import './CreateTicketModal.css';
 import ApiService from '../../services/api';
 
@@ -351,7 +352,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
             <h3>Attachments</h3>
             <div className="attachment-info">
               <p className="attachment-limit-message">
-                📎 You can upload up to 2 attachments (Maximum 2 files allowed)
+                <CgAttachment /> You can upload up to 2 attachments (Maximum 2 files allowed)
               </p>
             </div>
             <div className="form-group">
@@ -379,7 +380,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ onClose }) => {
                   triggerFileSelection();
                 }}
               >
-                📎 Choose Files {attachments.length >= 2 ? '(Limit Reached)' : ''}
+                <CgAttachment /> Choose Files {attachments.length >= 2 ? '(Limit Reached)' : ''}
               </label>
               {attachments.length >= 2 && (
                 <p className="limit-reached-message">

@@ -41,7 +41,7 @@
   align-items: center;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  background: linear-gradient(135deg, #122a37 0%, #48cfd5 100%);
+  background: #035c62;
   color: white;
   border-radius: 4px 4px 0 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -56,7 +56,6 @@
 }
 
 .close-btn {
-  background: rgba(255, 255, 255, 0.2);
   border: none;
   border-radius: 50%;
   width: 24px;
@@ -71,7 +70,6 @@
 }
 
 .close-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
   transform: scale(1.1);
 }
 
@@ -119,35 +117,35 @@
 }
 
 .form-group label {
-  font-size: 0.55rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #4a5568;
   font-family: 'Inter', sans-serif;
 }
 
-.form-group input,
-.form-group textarea,
-.form-group select {
+.modal-container .form-group input,
+.modal-container .form-group textarea,
+.modal-container .form-group select {
   padding: 0.25rem;
   border: 1px solid #e2e8f0;
   border-radius: 3px;
-  font-size: 0.7rem;
+  font-size: 0.9rem;
   font-family: 'Inter', sans-serif;
   background: rgba(255, 255, 255, 0.95);
   transition: all 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  /* box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); */
 }
 
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-  outline: none;
+.modal-container .form-group input:focus,
+.modal-container .form-group textarea:focus,
+.modal-container .form-group select:focus {
+  /* outline: none;
   border-color: #48cfd5;
-  box-shadow: 0 0 0 4px rgba(72, 207, 213, 0.15);
+  box-shadow: 0 0 0 4px rgba(72, 207, 213, 0.15); */
   transform: translateY(-1px);
 }
 
-.form-group textarea {
+.modal-container .form-group textarea {
   resize: vertical;
   min-height: 40px;
   font-family: 'Inter', sans-serif;

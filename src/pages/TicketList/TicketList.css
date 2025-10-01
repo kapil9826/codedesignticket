@@ -32,6 +32,37 @@
   gap: 12px;
 }
 
+/* Search Filter */
+.search-filter {
+  position: relative;
+}
+
+.search-filter .search-input {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+ 
+  background: white;
+  font-size: 8px;
+  color: #374151;
+  transition: all 0.2s ease;
+  min-width: 200px;
+}
+
+.search-filter .search-input:hover {
+  border-color: #9ca3af;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.search-filter .search-input:focus {
+  outline: none;
+  border-color: #035c62;
+  box-shadow: 0 0 0 3px rgba(3, 92, 98, 0.1);
+}
+
+.search-filter .search-input::placeholder {
+  color: #9ca3af;
+}
+
 /* Status Filter */
 .status-filter {
   position: relative;
@@ -249,11 +280,11 @@
 
 /* Ticket ID Cell */
 .ticket-id-cell {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-weight: 600;
-  color: #1e293b;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  color: #2d3748;
   font-size: 12px;
-  text-align: center;
+  text-align: left;
   padding: 8px 12px;
 }
 
@@ -265,15 +296,16 @@
 
 /* Ticket Subject Cell */
 .ticket-subject-cell {
-  color: #374151;
+  color: #2d3748;
   font-weight: 500;
+  font-size: 12px;
   max-width: 300px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-align: center;
-  font-size: 12px;
+  text-align: left;
   padding: 8px 12px;
+  text-transform: uppercase;
 }
 
 /* Priority Cell */
@@ -284,13 +316,16 @@
 .priority-badge {
   display: inline-block;
   padding: 3px 8px;
-  border-radius: 16px;
+  border-radius: 20px;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  border: 1px solid transparent;
   transition: all 0.2s ease;
   cursor: pointer;
+  background-color: #000000;
+  color: #ffffff;
 }
 
 .priority-badge:hover {
@@ -299,20 +334,7 @@
   font-weight: 700;
 }
 
-.priority-badge.priority-high {
-  background-color: #fef2f2;
-  color: #dc2626;
-}
-
-.priority-badge.priority-low {
-  background-color: #f0fdf4;
-  color: #16a34a;
-}
-
-.priority-badge.priority-medium {
-  background-color: #fffbeb;
-  color: #d97706;
-}
+/* All priority badges use the same styling as status badges */
 
 /* Status Cell */
 .status-cell {
@@ -322,7 +344,7 @@
 .status-badge {
   display: inline-block;
   padding: 3px 8px;
-  border-radius: 16px;
+  border-radius: 20px;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -330,6 +352,8 @@
   border: 1px solid transparent;
   transition: all 0.2s ease;
   cursor: pointer;
+  background-color: #000000;
+  color: #ffffff;
 }
 
 .status-badge:hover {
