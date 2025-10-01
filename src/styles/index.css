@@ -11,7 +11,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f8fafc;
+  background: #ffffff;
   color: #2d3748;
   line-height: 1.6;
 }
@@ -28,7 +28,7 @@ code {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #122a37 0%, #48cfd5 100%);
+  background: #035c62;
   color: white;
 }
 
@@ -67,10 +67,10 @@ code {
 }
 
 /* Focus styles for accessibility */
-*:focus {
-  outline: 2px solid #48cfd5;
+/* *:focus {
+  outline: 2px solid #035c62;
   outline-offset: 2px;
-}
+} */
 
 /* Button reset */
 button {
@@ -116,7 +116,7 @@ select {
 
 /* Selection styles */
 ::selection {
-  background: rgba(72, 207, 213, 0.2);
+  background: rgba(3, 92, 98, 0.2);
   color: #2d3748;
 }
 

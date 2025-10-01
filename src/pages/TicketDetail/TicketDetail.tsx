@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import SkeletonLoader from '../../components/SkeletonLoader/SkeletonLoader';
 import ApiService from '../../services/api';
 import { addCommentFoolproof } from '../../services/api-foolproof';
@@ -62,53 +62,85 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
   const [statuses, setStatuses] = useState<any[]>([]);
   const [priorities, setPriorities] = useState<any[]>([]);
 
-  // Generate status options from API data
-  const statusOptions = [
+  // Memoized status options to prevent unnecessary re-renders
+  const statusOptions = useMemo(() => [
     { value: 'all', label: 'All Status' },
     { value: 'Null', label: 'Null' },
     ...statuses.map((status: any) => ({
       value: status.name,
       label: status.name
     }))
-  ];
+  ], [statuses]);
 
-  // Generate priority options from API data
-  const priorityOptions = [
+  // Memoized priority options to prevent unnecessary re-renders
+  const priorityOptions = useMemo(() => [
     { value: 'all', label: 'All Priority' },
     { value: 'Null', label: 'Null' },
     ...priorities.map((priority: any) => ({
       value: priority.name,
       label: priority.name
     }))
-  ];
+  ], [priorities]);
 
-  // Helper function to get status styling - uses API colors when available
-  const getStatusStyling = (ticket: any) => {
-    const styling = {
+  // Memoized styling functions to prevent unnecessary recalculations
+  const getStatusStyling = useCallback((ticket: any) => {
+    return {
       backgroundColor: ticket.status_bg_color || '#e2e8f0',
       color: ticket.status_text_color || '#4a5568'
     };
-    
-    return styling;
-  };
+  }, []);
 
-  // Helper function to get priority styling - uses API colors when available
-  const getPriorityStyling = (ticket: any) => {
-    const styling = {
+  const getPriorityStyling = useCallback((ticket: any) => {
+    return {
       backgroundColor: ticket.priority_bg_color || '#e2e8f0',
       color: ticket.priority_text_color || '#4a5568'
     };
-    
-    return styling;
-  };
+  }, []);
 
-  // Fetch tickets from API for sidebar - FIXED: Don't clear on ticket change
-  const fetchTickets = async () => {
+  // Optimized ticket transformation with memoization
+  const transformTicket = useCallback((ticket: any) => {
+    const finalPriority = ticket.priority_name || ticket.priority || 'Null';
+    
+    return {
+      id: ticket.ticket_number || ticket.id || `TC-${ticket.id}`,
+      requester: ticket.user_name || 'Unknown',
+      issue: ticket.title || 'No description',
+      time: ticket.created_at || new Date().toLocaleTimeString(),
+      status: ticket.status_name || ticket.status || 'Null',
+      priority: finalPriority,
+      priority_name: ticket.priority_name || finalPriority,
+      priority_bg_color: ticket.priority_bg_color,
+      priority_text_color: ticket.priority_text_color,
+      status_name: ticket.status_name,
+      status_bg_color: ticket.status_bg_color,
+      status_text_color: ticket.status_text_color,
+      badge: 0,
+      description: ticket.description || 'No description available',
+      attachments: ticket.documents ? ticket.documents.length : 0,
+      createdAt: ticket.created_at || new Date().toLocaleDateString()
+    };
+  }, []);
+
+  // Optimized fetch tickets with caching and reduced API calls
+  const fetchTickets = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
       
-      console.log('🔍 Sidebar: Fetching tickets from API...');
+      // Check if we already have tickets in cache
+      const cachedTickets = localStorage.getItem('cachedTickets');
+      const cacheTimestamp = localStorage.getItem('ticketsCacheTimestamp');
+      const now = Date.now();
+      const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+      
+      if (cachedTickets && cacheTimestamp && (now - parseInt(cacheTimestamp)) < CACHE_DURATION) {
+        console.log('🚀 Using cached tickets');
+        const tickets = JSON.parse(cachedTickets);
+        setTickets(tickets);
+        setLoading(false);
+        return;
+      }
+      
       const result = await ApiService.getTickets(1, 100);
       
       if (result.success && result.data && result.data.status === '1' && result.data.data) {
@@ -120,31 +152,13 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         }
         
         if (apiTickets.length > 0) {
-          const transformedTickets: Ticket[] = apiTickets.map((ticket: any) => {
-            const finalPriority = ticket.priority_name || ticket.priority || 'Null';
-            
-            return {
-              id: ticket.ticket_number || ticket.id || `TC-${ticket.id}`,
-              requester: ticket.user_name || 'Unknown',
-              issue: ticket.title || 'No description',
-              time: ticket.created_at || new Date().toLocaleTimeString(),
-              status: ticket.status_name || ticket.status || 'Null',
-              priority: finalPriority,
-              priority_name: ticket.priority_name || finalPriority,
-              priority_bg_color: ticket.priority_bg_color,
-              priority_text_color: ticket.priority_text_color,
-              status_name: ticket.status_name,
-              status_bg_color: ticket.status_bg_color,
-              status_text_color: ticket.status_text_color,
-              badge: 0,
-              description: ticket.description || 'No description available',
-              attachments: ticket.documents ? ticket.documents.length : 0,
-              createdAt: ticket.created_at || new Date().toLocaleDateString()
-            };
-          });
-          
+          // Use optimized transformation
+          const transformedTickets: Ticket[] = apiTickets.map(transformTicket);
           setTickets(transformedTickets);
-          console.log('✅ Sidebar: Successfully loaded', transformedTickets.length, 'tickets');
+          
+          // Cache the results
+          localStorage.setItem('cachedTickets', JSON.stringify(transformedTickets));
+          localStorage.setItem('ticketsCacheTimestamp', now.toString());
         } else {
           setTickets([]);
         }
@@ -157,37 +171,40 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     } finally {
       setLoading(false);
     }
-  };
+  }, [transformTicket]);
 
-  // Fetch specific ticket details from API - FIXED: Better error handling
-  const fetchTicketDetails = async (ticketId: string) => {
+  // Optimized fetch ticket details with caching and reduced API calls
+  const fetchTicketDetails = useCallback(async (ticketId: string) => {
     try {
       setTicketLoading(true);
       setTicketError('');
       
-      console.log('🔍 Fetching ticket details for:', ticketId);
+      // Check cache first
+      const cacheKey = `ticket-details-${ticketId}`;
+      const cachedDetails = localStorage.getItem(cacheKey);
+      const cacheTimestamp = localStorage.getItem(`${cacheKey}-timestamp`);
+      const now = Date.now();
+      const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for ticket details
+      
+      if (cachedDetails && cacheTimestamp && (now - parseInt(cacheTimestamp)) < CACHE_DURATION) {
+        console.log('🚀 Using cached ticket details');
+        const ticketData = JSON.parse(cachedDetails);
+        setCurrentTicket(ticketData.ticket);
+        setComments(ticketData.comments || []);
+        setTicketLoading(false);
+        return;
+      }
       
       let databaseId = ticketId;
       
-      // Try to resolve ticket ID
-      if (typeof ticketId === 'string' && /^\d+$/.test(ticketId)) {
-        databaseId = ticketId;
-      } else {
-        try {
-          const ticketsResult = await ApiService.getTickets(1, 1000);
-          
-          if (ticketsResult.success && ticketsResult.data && ticketsResult.data.data) {
-            let apiTickets = [];
-            if (Array.isArray(ticketsResult.data.data)) {
-              apiTickets = ticketsResult.data.data;
-            } else if (ticketsResult.data.data && typeof ticketsResult.data.data === 'object' && Array.isArray(ticketsResult.data.data.data)) {
-              apiTickets = ticketsResult.data.data.data;
-            }
-            
-            const matchingTicket = apiTickets.find((ticket: any) => {
-              const matchesTicketNumber = ticket.ticket_number === ticketId;
-              const matchesId = ticket.id === ticketId;
-              return matchesTicketNumber || matchesId;
+      // Optimized ID resolution - use cached tickets if available
+      if (!/^\d+$/.test(ticketId)) {
+        const cachedTickets = localStorage.getItem('cachedTickets');
+        if (cachedTickets) {
+          try {
+            const tickets = JSON.parse(cachedTickets);
+            const matchingTicket = tickets.find((ticket: any) => {
+              return ticket.id === ticketId;
             });
             
             if (matchingTicket) {
@@ -198,9 +215,40 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                 databaseId = match[0];
               }
             }
+          } catch (error) {
+            console.log('⚠️ Error using cached tickets for ID lookup:', error);
           }
-        } catch (error) {
-          console.log('⚠️ Error fetching tickets for ID lookup:', error);
+        }
+        
+        // Fallback to API if cache doesn't have the ticket
+        if (databaseId === ticketId) {
+          try {
+            const ticketsResult = await ApiService.getTickets(1, 1000);
+            
+            if (ticketsResult.success && ticketsResult.data && ticketsResult.data.data) {
+              let apiTickets = [];
+              if (Array.isArray(ticketsResult.data.data)) {
+                apiTickets = ticketsResult.data.data;
+              } else if (ticketsResult.data.data && typeof ticketsResult.data.data === 'object' && Array.isArray(ticketsResult.data.data.data)) {
+                apiTickets = ticketsResult.data.data.data;
+              }
+              
+              const matchingTicket = apiTickets.find((ticket: any) => {
+                return ticket.ticket_number === ticketId || ticket.id === ticketId;
+              });
+              
+              if (matchingTicket) {
+                databaseId = matchingTicket.id;
+              } else {
+                const match = ticketId.match(/\d+/);
+                if (match) {
+                  databaseId = match[0];
+                }
+              }
+            }
+          } catch (error) {
+            console.log('⚠️ Error fetching tickets for ID lookup:', error);
+          }
         }
       }
       
@@ -233,20 +281,12 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
           priority_text_color: ticketData.priority_text_color
         };
         
-        // Debug: Log ticket data to see what we're getting
-        console.log('🔍 Ticket data from API:', {
-          id: transformedTicket.id,
-          title: transformedTicket.title,
-          documents: ticketData.documents,
-          documentsLength: ticketData.documents ? ticketData.documents.length : 0,
-          fullTicketData: ticketData
-        });
-        
         setCurrentTicket(transformedTicket);
         
-        // Load existing comments from notes - FIXED: Better comment loading
+        // Optimized comment loading
+        let existingComments: Comment[] = [];
         if (transformedTicket.notes && Array.isArray(transformedTicket.notes)) {
-          const existingComments: Comment[] = transformedTicket.notes.map((note: any, index: number) => ({
+          existingComments = transformedTicket.notes.map((note: any, index: number) => ({
             id: `note-${note.id || index}`,
             author: note.created_by || note.author || 'You',
             message: note.note || note.content || note.message || 'No content',
@@ -260,12 +300,16 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               url: doc
             })) : []
           }));
-          setComments(existingComments);
-          console.log('✅ Loaded', existingComments.length, 'comments from API');
-        } else {
-          setComments([]);
-          console.log('⚠️ No notes found for this ticket');
         }
+        setComments(existingComments);
+        
+        // Cache the ticket details and comments
+        const cacheData = {
+          ticket: transformedTicket,
+          comments: existingComments
+        };
+        localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+        localStorage.setItem(`${cacheKey}-timestamp`, now.toString());
       } else {
         setTicketError(result.error || 'Failed to load ticket details');
       }
@@ -275,59 +319,85 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     } finally {
       setTicketLoading(false);
     }
-  };
+  }, []);
 
-  // Fetch statuses
-  const fetchStatuses = async () => {
+  // Optimized fetch statuses and priorities with caching
+  const fetchStatuses = useCallback(async () => {
     try {
-      const result = await ApiService.getTicketStatuses();
+      // Check cache first
+      const cachedStatuses = localStorage.getItem('cachedStatuses');
+      const cacheTimestamp = localStorage.getItem('statusesCacheTimestamp');
+      const now = Date.now();
+      const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes for statuses
       
+      if (cachedStatuses && cacheTimestamp && (now - parseInt(cacheTimestamp)) < CACHE_DURATION) {
+        console.log('🚀 Using cached statuses');
+        setStatuses(JSON.parse(cachedStatuses));
+        return;
+      }
+      
+      const result = await ApiService.getTicketStatuses();
       if (result.success && result.data && result.data.status === '1') {
-        setStatuses(result.data.data || []);
+        const statusesData = result.data.data || [];
+        setStatuses(statusesData);
+        
+        // Cache the results
+        localStorage.setItem('cachedStatuses', JSON.stringify(statusesData));
+        localStorage.setItem('statusesCacheTimestamp', now.toString());
       }
     } catch (error: any) {
       console.error('❌ Error fetching statuses:', error);
     }
-  };
+  }, []);
 
-  // Fetch priorities
-  const fetchPriorities = async () => {
+  const fetchPriorities = useCallback(async () => {
     try {
-      const result = await ApiService.getTicketPriorities();
+      // Check cache first
+      const cachedPriorities = localStorage.getItem('cachedPriorities');
+      const cacheTimestamp = localStorage.getItem('prioritiesCacheTimestamp');
+      const now = Date.now();
+      const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes for priorities
       
+      if (cachedPriorities && cacheTimestamp && (now - parseInt(cacheTimestamp)) < CACHE_DURATION) {
+        console.log('🚀 Using cached priorities');
+        setPriorities(JSON.parse(cachedPriorities));
+        return;
+      }
+      
+      const result = await ApiService.getTicketPriorities();
       if (result.success && result.data && result.data.status === '1') {
-        setPriorities(result.data.data || []);
+        const prioritiesData = result.data.data || [];
+        setPriorities(prioritiesData);
+        
+        // Cache the results
+        localStorage.setItem('cachedPriorities', JSON.stringify(prioritiesData));
+        localStorage.setItem('prioritiesCacheTimestamp', now.toString());
       }
     } catch (error: any) {
       console.error('❌ Error fetching priorities:', error);
     }
-  };
+  }, []);
 
-  // File selection handler - FIXED: Better file handling
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Optimized file selection handler
+  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     
     if (files.length > 0) {
-      setSelectedFiles(prev => {
-        const newFiles = [...prev, ...files];
-        console.log('📎 Selected files:', newFiles.map(f => f.name));
-        return newFiles;
-      });
+      setSelectedFiles(prev => [...prev, ...files]);
     }
     
-    // Clear the input value to allow selecting the same file again
     if (event.target) {
       event.target.value = '';
     }
-  };
+  }, []);
 
-  // Remove file handler
-  const removeFile = (index: number) => {
+  // Optimized remove file handler
+  const removeFile = useCallback((index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-  };
+  }, []);
 
-  // Add comment handler - FIXED: Better comment submission
-  const handleAddComment = async () => {
+  // Optimized add comment handler
+  const handleAddComment = useCallback(async () => {
     if (!newComment.trim() && selectedFiles.length === 0) {
       alert('Please enter a comment or select a file to attach.');
       return;
@@ -335,14 +405,10 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     
     try {
       setIsUploadingComment(true);
-      console.log('🚀 Adding comment:', { ticketId, comment: newComment, files: selectedFiles.length });
       
       const result = await addCommentFoolproof(ticketId, newComment, selectedFiles);
       
       if (result.success) {
-        console.log('✅ Comment added successfully!');
-        
-        // Create local comment for immediate display
         const newCommentObj: Comment = {
           id: `local-${Date.now()}`,
           author: 'You',
@@ -364,11 +430,8 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
-        
-        console.log('🎉 Comment with attachments added successfully!');
       } else {
-        console.log('❌ API call failed:', result.error);
-        alert(`Failed to add comment: ${result.error}`);
+        alert('Failed to add comment. Please try again.');
       }
     } catch (error) {
       console.error('❌ Error adding comment:', error);
@@ -376,33 +439,51 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
     } finally {
       setIsUploadingComment(false);
     }
-  };
+  }, [ticketId, newComment, selectedFiles]);
 
-  // Key press handler
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  // Optimized key press handler
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && e.ctrlKey) {
       handleAddComment();
     }
-  };
+  }, [handleAddComment]);
 
-  // Filter tickets based on search, status, and priority
-  const filteredTickets = tickets.filter(ticket => {
-    const matchesSearch = ticket.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         ticket.issue.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         ticket.priority.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || (ticket as any).status_name === statusFilter;
-    const matchesPriority = priorityFilter === 'all' || (ticket as any).priority_name === priorityFilter;
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
+  // Memoized filtered tickets to prevent unnecessary recalculations
+  const filteredTickets = useMemo(() => {
+    return tickets.filter(ticket => {
+      const matchesSearch = ticket.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           ticket.issue.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           ticket.priority.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || (ticket as any).status_name === statusFilter;
+      const matchesPriority = priorityFilter === 'all' || (ticket as any).priority_name === priorityFilter;
+      return matchesSearch && matchesStatus && matchesPriority;
+    });
+  }, [tickets, searchTerm, statusFilter, priorityFilter]);
 
-  // FIXED: Load tickets only once on mount, not on every ticket change
+  // Optimized useEffect with proper dependencies and priority loading
   useEffect(() => {
-    fetchTickets();
-    fetchStatuses();
-    fetchPriorities();
-  }, []);
+    // Load critical data first (tickets), then load metadata in parallel
+    const loadData = async () => {
+      try {
+        // Load tickets first as they're most critical
+        await fetchTickets();
+        
+        // Load statuses and priorities in parallel (non-blocking)
+        Promise.all([
+          fetchStatuses(),
+          fetchPriorities()
+        ]).catch(error => {
+          console.error('Error loading metadata:', error);
+        });
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+      }
+    };
+    
+    loadData();
+  }, [fetchTickets, fetchStatuses, fetchPriorities]);
 
-  // FIXED: Only fetch ticket details when ticketId changes
+  // Optimized ticket details loading
   useEffect(() => {
     if (ticketId) {
       fetchTicketDetails(ticketId);
@@ -427,7 +508,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       setCurrentTicket(fallbackTicket);
       setTicketLoading(false);
     }
-  }, [ticketId]);
+  }, [ticketId, fetchTicketDetails]);
 
   return (
     <div className="ticket-detail-container">
@@ -435,8 +516,6 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       <div className="ticket-list-sidebar">
         <div className="sidebar-header">
           <button className="back-btn" onClick={onClose}>←</button>
-        </div>
-        <div className="sidebar-search">
           <input
             type="text"
             placeholder="Search tickets..."
@@ -536,44 +615,61 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
       {/* Comments Section - Middle */}
       <div className="comments-section">
         <div className="comments-header">
-          <h3>Comments ({comments.length})</h3>
+          <h3>Comments</h3>
+           {/* ({comments.length}) */}
         </div>
 
         <div className="comments-list">
           {ticketLoading && comments.length === 0 && (
             <SkeletonLoader type="comment" count={2} />
           )}
+          {!ticketLoading && comments.length === 0 && (
+            <div className="no-comments">
+              <p>No comments yet. Be the first to add a comment!</p>
+            </div>
+          )}
           {comments.map((comment) => (
             <div key={comment.id} className="comment-item">
-              <div className="comment-header">
-                <div className="comment-author">{comment.author}</div>
-                <div className="comment-timestamp">{comment.timestamp}</div>
+              <div className="comment-avatar">
+                {comment.author.charAt(0).toUpperCase()}
               </div>
-              <div className="comment-message">{comment.message}</div>
-              {comment.attachments && comment.attachments.length > 0 && (
-                <div className="comment-attachments">
-                  <div className="attachments-label">{comment.attachments.length} Attachments</div>
-                  {comment.attachments.map((attachment) => (
-                    <div key={attachment.id} className="comment-attachment">
-                      <span className="attachment-icon">📎</span>
-                      {attachment.url ? (
-                        <a 
-                          href={attachment.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="attachment-link"
-                          style={{color: '#3b82f6', textDecoration: 'underline' }}
-                        >
-                          {attachment.name}
-                        </a>
-                      ) : (
-                      <span className="attachment-name">{attachment.name}</span>
-                      )}
-                      <span className="attachment-size">({attachment.size})</span>
-                    </div>
-                  ))}
+              <div className="comment-bubble">
+                <div className="comment-header">
+                  <div className="comment-author">{comment.author}</div>
+                  <div className="comment-timestamp">
+                    {new Date(comment.timestamp).toLocaleTimeString([], { 
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      hour12: true 
+                    })}
+                    
+                  </div>
                 </div>
-              )}
+                <div className="comment-message">{comment.message}</div>
+                {comment.attachments && comment.attachments.length > 0 && (
+                  <div className="comment-attachments">
+                    {comment.attachments.map((attachment) => (
+                      <div key={attachment.id} className="attachment-item">
+                        <span className="attachment-icon">📎</span>
+                        {attachment.url ? (
+                          <a 
+                            href={attachment.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="attachment-link"
+                            style={{color: '#035c62', textDecoration: 'underline' }}
+                          >
+                            {attachment.name}
+                          </a>
+                        ) : (
+                        <span className="attachment-name">{attachment.name}</span>
+                        )}
+                        <span className="attachment-size">({attachment.size})</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -610,21 +706,36 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
               data-enable-grammarly="false"
             />
             <div className="comment-actions">
-              <input
-                type="file"
-                multiple
-                onChange={handleFileSelect}
-                ref={fileInputRef}
-                style={{ display: 'none' }}
-                id="file-input"
-                accept="*/*"
-              />
-              <label 
-                htmlFor="file-input" 
-                className="attachment-btn"
-              >
-                📎 Attach Files
-              </label>
+              <div className="formatting-icons">
+                <button className="formatting-icon" title="Format text">
+                  A
+                </button>
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  id="file-input"
+                  accept="*/*"
+                />
+                <label 
+                  htmlFor="file-input" 
+                  className="formatting-icon"
+                  title="Attach files"
+                >
+                  📎
+                </label>
+                <button className="formatting-icon" title="Add link">
+                  🔗
+                </button>
+                <button className="formatting-icon" title="Add emoji">
+                  😊
+                </button>
+                <button className="formatting-icon" title="Voice message">
+                  🎤
+                </button>
+              </div>
               <button 
                 className="add-comment-btn" 
                 onClick={(e) => {
@@ -634,8 +745,9 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
                 }}
                 type="button"
                 disabled={isUploadingComment}
+                title="Send comment"
               >
-                {isUploadingComment ? 'Uploading...' : 'Send Comment'}
+                →
               </button>
             </div>
           </div>
@@ -653,6 +765,12 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticketId, onClose, onTicket
         {ticketError && (
           <div className="ticket-error">
             <p>⚠️ {ticketError}</p>
+            <button 
+              className="retry-btn" 
+              onClick={() => fetchTicketDetails(ticketId)}
+            >
+              Retry
+            </button>
           </div>
         )}
         

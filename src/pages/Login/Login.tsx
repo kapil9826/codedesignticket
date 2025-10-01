@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
-import logoImage from '../../assets/logo.webp';
+import logoImage from './blacklogo.png';
 import ApiService from '../../services/api';
 
 const Login: React.FC = () => {
@@ -178,6 +178,12 @@ const Login: React.FC = () => {
 
   return (
     <div className="login-container" onClick={() => setError('')}>
+      {/* Floating chat bubbles */}
+      <div className="floating-chat-bubble"></div>
+      <div className="floating-chat-bubble"></div>
+      <div className="floating-chat-bubble"></div>
+      <div className="floating-chat-bubble"></div>
+      
       {/* Elegant floating orbs */}
       <div className="floating-particle"></div>
       <div className="floating-particle"></div>
@@ -200,58 +206,66 @@ const Login: React.FC = () => {
                 className="logo-image"
               />
             </div>
-            <p className="login-subtitle">Your Support Hub</p>
+            <h1 className="login-title">Welcome Back!</h1>
+            <p className="login-subtitle">Enter your information to access your account.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
             {error && <div className="error-message">{error}</div>}
 
             <div className="form-group">
-              <div className="input-container">
+              <div className="input-field">
                 <div className="input-icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
                     <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
                   </svg>
                 </div>
-                <input
-                  type="text"
-                  name="username"
-                  placeholder="Username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  required
-                  className="login-input"
-                  autoComplete="username"
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  spellCheck="false"
-                />
+                <div className="input-content">
+                  <label className="input-label">Email Address</label>
+                  <input
+                    type="email"
+                    name="username"
+                    placeholder="Enter email address"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    required
+                    className="login-input"
+                    autoComplete="username"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck="false"
+                  />
+                </div>
               </div>
             </div>
 
             <div className="form-group">
-              <div className="input-container">
+              <div className="input-field">
                 <div className="input-icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
                     <circle cx="12" cy="16" r="1" fill="currentColor"/>
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" strokeWidth="2"/>
                   </svg>
                 </div>
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="Password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                  className="login-input"
-                  autoComplete="current-password"
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  spellCheck="false"
-                />
+                <div className="input-content">
+                  <label className="input-label">Password</label>
+                  <input
+                    type="password"
+                    name="password"
+                    placeholder="Enter password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required
+                    className="login-input"
+                    autoComplete="current-password"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck="false"
+                  />
+                </div>
+              
               </div>
             </div>
 
@@ -262,10 +276,18 @@ const Login: React.FC = () => {
                   Signing In...
                 </>
               ) : (
-                'Sign In'
+                'Log In'
               )}
             </button>
+
+         
           </form>
+
+          <div className="login-footer">
+            <p className="copyright">
+              © 2025 Design by <span className="highlight">Code n Design Consultants</span>
+            </p>
+          </div>
         </div>
       </div>
     </div>

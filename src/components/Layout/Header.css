@@ -1,9 +1,9 @@
 .header {
-  background: linear-gradient(135deg, #122a37 0%, #48cfd5 100%);
+  background: #035c62;
   color: white;
   height: 60px;
-  box-shadow: 0 8px 32px rgba(72, 207, 213, 0.3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(3, 92, 98, 0.3);
+  border-bottom: 1px solid #024a4f;
   position: fixed;
   top: 0;
   left: 0;
@@ -11,26 +11,11 @@
   z-index: 9999;
   margin-left: 0;
   width: 100%;
-  backdrop-filter: blur(20px);
   overflow: visible;
   display: block;
 }
 
-.header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
-  animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
+/* Removed shimmer animation for cleaner look */
 
 .header-container {
   max-width: 100%;
@@ -68,8 +53,8 @@
 }
 
 .create-ticket-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: #024a4f;
+  border: 1px solid #013a3e;
   border-radius: 6px;
   padding: 0.375rem 0.75rem;
   color: white;
@@ -84,16 +69,16 @@
 }
 
 .create-ticket-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: #013a3e;
+  border-color: #012a2d;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(3, 92, 98, 0.4);
 }
 
 .notification-btn,
 .settings-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #024a4f;
+  border: 1px solid #013a3e;
   border-radius: 6px;
   padding: 0.25rem;
   color: white;
@@ -107,7 +92,7 @@
 
 .notification-btn:hover,
 .settings-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: #013a3e;
   color: white;
 }
 
@@ -133,8 +118,8 @@
 }
 
 .user-menu-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #024a4f;
+  border: 1px solid #013a3e;
   border-radius: 6px;
   padding: 0.375rem 0.75rem;
   color: white;
@@ -147,7 +132,7 @@
 }
 
 .user-menu-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: #013a3e;
   color: white;
 }
 
@@ -161,8 +146,8 @@
   right: 0;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px rgba(3, 92, 98, 0.2);
+  border: 1px solid #035c62;
   min-width: 200px;
   z-index: 9998;
   margin-top: 0.5rem;
@@ -185,7 +170,7 @@
 }
 
 .dropdown-item:hover {
-  background: #f7fafc;
+  background: rgba(3, 92, 98, 0.1);
   color: #2d3748;
 }
 
@@ -448,9 +433,9 @@
 
 .logout-confirm-btn {
   padding: 8px 16px;
-  border: 1px solid #0d2026;
+  border: 1px solid #013a3e;
   border-radius: 6px;
-  background: #317479;
+  background: #035c62;
   color: white;
   font-size: 12px;
   font-weight: 500;
@@ -460,8 +445,8 @@
 }
 
 .logout-confirm-btn:hover:not(:disabled) {
-  background: #b91c1c;
-  border-color: #b91c1c;
+  background: #024a4f;
+  border-color: #013a3e;
 }
 
 .logout-confirm-btn:disabled {

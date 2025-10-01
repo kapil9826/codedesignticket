@@ -334,10 +334,10 @@ body .modal-overlay {
 }
 
 /* Make sure file input is accessible */
-.file-input:focus {
+/* .file-input:focus {
   outline: 2px solid #48cfd5;
   outline-offset: 2px;
-}
+} */
 
 .file-input-label {
   display: inline-flex;

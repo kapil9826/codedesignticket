@@ -56,8 +56,8 @@
 
 .status-dropdown:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #035c62;
+  box-shadow: 0 0 0 3px rgba(3, 92, 98, 0.1);
 }
 
 /* Priority Filter */
@@ -84,8 +84,8 @@
 
 .priority-dropdown:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #035c62;
+  box-shadow: 0 0 0 3px rgba(3, 92, 98, 0.1);
 }
 
 /* Search Container */
@@ -120,8 +120,8 @@
 
 .search-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #035c62;
+  box-shadow: 0 0 0 3px rgba(3, 92, 98, 0.1);
 }
 
 .search-input::placeholder {
@@ -145,7 +145,7 @@
 }
 
 .tickets-table thead {
-  background: linear-gradient(135deg, #122a37 0%, #48cfd5 100%);
+  background: #035c62;
   border-bottom: 2px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -165,16 +165,54 @@
 }
 
 .tickets-table th.sortable {
-  cursor: pointer;
+  cursor: default;
   position: relative;
 }
 
-/* Disable hover effects only */
+/* Completely disable hover effects on table headers */
+.tickets-table th,
 .tickets-table th:hover,
-.tickets-table td:hover,
+.tickets-table th:active,
+.tickets-table th:focus {
+  background: #035c62 !important;
+  color: white !important;
+  transform: none !important;
+  box-shadow: none !important;
+  transition: none !important;
+  cursor: default !important;
+}
+
+/* Hover effects for table rows */
 .tickets-table tr:hover {
-  background: inherit !important;
-  color: inherit !important;
+  background: #f8fafc !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.tickets-table tr:hover .ticket-id-cell {
+  color: #035c62 !important;
+  font-weight: 700;
+}
+
+.tickets-table tr:hover .ticket-subject-cell {
+  color: #2d3748 !important;
+  font-weight: 600;
+}
+
+.tickets-table tr:hover .priority-badge {
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.tickets-table tr:hover .status-badge {
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.tickets-table tr:hover .date-cell {
+  color: #035c62 !important;
+  font-weight: 600;
 }
 
 
@@ -252,6 +290,13 @@
   text-transform: uppercase;
   letter-spacing: 0.3px;
   transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.priority-badge:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  font-weight: 700;
 }
 
 .priority-badge.priority-high {
@@ -284,6 +329,13 @@
   letter-spacing: 0.3px;
   border: 1px solid transparent;
   transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.status-badge:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  font-weight: 700;
 }
 
 .status-badge.status-active {
@@ -377,14 +429,14 @@
 
 .pagination-page:hover {
   background-color: #f8fafc;
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: #035c62;
+  color: #035c62;
 }
 
 .pagination-page.active {
-  background-color: #3b82f6;
+  background-color: #035c62;
   color: white;
-  border-color: #3b82f6;
+  border-color: #035c62;
 }
 
 .pagination-btn {
@@ -403,8 +455,8 @@
 
 .pagination-btn:hover:not(:disabled) {
   background-color: #f8fafc;
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: #035c62;
+  color: #035c62;
 }
 
 .pagination-btn:disabled {
@@ -439,7 +491,7 @@
 
 .retry-btn {
   padding: 8px 16px;
-  background: #3b82f6;
+  background: #035c62;
   color: white;
   border: none;
   border-radius: 6px;
@@ -450,7 +502,7 @@
 }
 
 .retry-btn:hover {
-  background: #2563eb;
+  background: #024a4f;
   transform: translateY(-1px);
 }
 
@@ -678,7 +730,7 @@
 
 /* Focus states for accessibility */
 .ticket-row:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #035c62;
   outline-offset: 2px;
 }
 
@@ -687,7 +739,7 @@
 .pagination-page:focus,
 .pagination-btn:focus,
 .retry-btn:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #035c62;
   outline-offset: 2px;
 }
 
