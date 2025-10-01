@@ -1,0 +1,387 @@
+/* Professional Header Design */
+.header {
+  background: #035c62;
+  color: white;
+  height: 56px;
+  box-shadow: 0 2px 8px rgba(3, 92, 98, 0.2);
+  border-bottom: 1px solid #024a4f;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 99999 !important;
+  width: 100% !important;
+  display: flex !important;
+  align-items: center;
+}
+
+/* Removed shimmer animation for cleaner look */
+
+.header-container {
+  width: 100%;
+  margin: 0;
+  padding: 0 16px;
+  height: 100%;
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.logo {
+  display: flex !important;
+  align-items: center;
+  text-decoration: none;
+  position: relative;
+  z-index: 3;
+}
+
+.logo-image {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+}
+
+.header-actions {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 3;
+}
+
+.create-ticket-btn {
+  background: #024a4f !important;
+  border: 1px solid #013a3e !important;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: white !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  position: relative;
+  z-index: 4;
+  height: 32px;
+}
+
+.create-ticket-btn:hover {
+  background: #013a3e;
+  border-color: #012a2d;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(3, 92, 98, 0.4);
+}
+
+.notification-btn,
+.settings-btn {
+  background: #024a4f;
+  border: 1px solid #013a3e;
+  border-radius: 6px;
+  padding: 0.25rem;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-btn:hover,
+.settings-btn:hover {
+  background: #013a3e;
+  color: white;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #e53e3e;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-menu {
+  position: relative !important;
+  z-index: 99998 !important;
+}
+
+.user-menu-btn {
+  background: #024a4f !important;
+  border: 1px solid #013a3e !important;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: white !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  position: relative;
+  z-index: 5;
+  height: 32px;
+  font-size: 12px;
+}
+
+.user-menu-btn:hover {
+  background: #013a3e;
+  color: white;
+}
+
+.user-greeting {
+  font-size: 12px;
+}
+
+.user-dropdown {
+  position: fixed !important;
+  top: 56px !important;
+  right: 16px !important;
+  background: white !important;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(3, 92, 98, 0.15) !important;
+  border: 1px solid #e2e8f0 !important;
+  min-width: 180px;
+  z-index: 999999 !important;
+  margin-top: 4px;
+  display: block !important;
+}
+
+.dropdown-item {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  color: #4a5568 !important;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-size: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.dropdown-item:hover {
+  background: rgba(3, 92, 98, 0.1);
+  color: #2d3748;
+}
+
+.dropdown-item.logout {
+  color: #e53e3e;
+}
+
+.dropdown-item.logout:hover {
+  background: #fed7d7;
+  color: #c53030;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header-container {
+    padding: 0 12px;
+  }
+  
+  .header-actions {
+    gap: 6px;
+  }
+  
+  .create-ticket-btn {
+    font-size: 11px;
+    padding: 6px 10px;
+    height: 28px;
+  }
+  
+  .user-menu-btn {
+    font-size: 11px;
+    padding: 6px 10px;
+    height: 28px;
+  }
+  
+  .user-greeting {
+    display: none;
+  }
+  
+  .logo-image {
+    height: 28px;
+  }
+}
+
+/* Logout Confirmation Modal Styles */
+.logout-confirmation-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999 !important;
+  backdrop-filter: blur(2px);
+  width: 100vw !important;
+  height: 100vh !important;
+  /* Ensure modal is visible */
+  overflow: visible;
+}
+
+.logout-confirmation-modal {
+  background: white !important;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  max-width: 400px;
+  width: 90%;
+  margin: 0;
+  overflow: hidden;
+  animation: modalSlideIn 0.3s ease-out;
+  position: relative;
+  transform: translate(0, 0);
+  z-index: 1000000 !important;
+  /* Ensure modal is visible */
+  display: block !important;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.logout-confirmation-header {
+  padding: 24px 24px 16px;
+  text-align: center;
+  background: white;
+}
+
+.logout-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.logout-icon svg {
+  color: #374151;
+  stroke-width: 2.5;
+}
+
+.logout-confirmation-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.logout-confirmation-body {
+  padding: 0 24px 20px;
+  text-align: center;
+}
+
+.logout-confirmation-body p {
+  margin: 0;
+  font-size: 12px;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.logout-confirmation-actions {
+  padding: 20px 24px 24px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  background: white;
+}
+
+.logout-cancel-btn {
+  padding: 8px 16px;
+  border: 1px solid #6b7280;
+  border-radius: 6px;
+  background: #6b7280;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.logout-cancel-btn:hover:not(:disabled) {
+  background: #4b5563;
+  border-color: #4b5563;
+}
+
+.logout-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.logout-confirm-btn {
+  padding: 8px 16px;
+  border: 1px solid #013a3e;
+  border-radius: 6px;
+  background: #035c62;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.logout-confirm-btn:hover:not(:disabled) {
+  background: #024a4f;
+  border-color: #013a3e;
+}
+
+.logout-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #9ca3af;
+  border-color: #9ca3af;
+}
+
+/* Mobile responsiveness for logout modal */
+@media (max-width: 480px) {
+  .logout-confirmation-modal {
+    margin: 0;
+    width: calc(100% - 20px);
+    max-width: none;
+  }
+  
+  .logout-confirmation-header,
+  .logout-confirmation-body,
+  .logout-confirmation-actions {
+    padding: 16px;
+  }
+  
+  .logout-confirmation-actions {
+    flex-direction: column;
+  }
+  
+  .logout-cancel-btn,
+  .logout-confirm-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

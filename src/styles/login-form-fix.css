@@ -1,0 +1,187 @@
+/* Login Form Fix - Ensure login form is clickable and functional */
+
+/* Reset any interfering styles for login form */
+.login-container input,
+.login-container button,
+.login-container select,
+.login-container textarea {
+  /* Ensure form elements are clickable */
+  pointer-events: auto !important;
+  user-select: auto !important;
+  -webkit-user-select: auto !important;
+  -moz-user-select: auto !important;
+  -ms-user-select: auto !important;
+  /* Reset any inherited styles that might interfere */
+  position: relative !important;
+  z-index: 10 !important;
+  /* Ensure proper display */
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Login form container */
+.login-form {
+  position: relative !important;
+  z-index: 10 !important;
+  /* Ensure form is clickable */
+  pointer-events: auto !important;
+  /* Reset any inherited styles */
+  isolation: auto !important;
+  overflow: visible !important;
+}
+
+/* Form groups */
+.form-group {
+  position: relative !important;
+  z-index: 11 !important;
+  /* Ensure form groups are clickable */
+  pointer-events: auto !important;
+  overflow: visible !important;
+}
+
+/* Input fields */
+.input-field,
+.simple-input {
+  position: relative !important;
+  z-index: 12 !important;
+  /* Ensure inputs are clickable */
+  pointer-events: auto !important;
+  cursor: text !important;
+  /* Reset any inherited styles */
+  background: white !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #2d3748 !important;
+  /* Ensure proper display */
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  /* Remove any transforms that might interfere */
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* Input focus states */
+.input-field:focus,
+.simple-input:focus {
+  border-color: #035c62 !important;
+  box-shadow: 0 0 0 3px rgba(3, 92, 98, 0.1) !important;
+  outline: none !important;
+  /* Ensure focus is visible */
+  z-index: 13 !important;
+}
+
+/* Login button */
+.login-btn {
+  position: relative !important;
+  z-index: 12 !important;
+  /* Ensure button is clickable */
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  /* Reset any inherited styles */
+  background: #035c62 !important;
+  color: white !important;
+  border: 1px solid #024a4f !important;
+  /* Ensure proper display */
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  /* Remove any transforms that might interfere */
+  transform: none !important;
+  will-change: auto !important;
+}
+
+.login-btn:hover {
+  background: #024a4f !important;
+  border-color: #013a3e !important;
+  transform: translateY(-1px) !important;
+}
+
+.login-btn:active {
+  transform: translateY(0) !important;
+}
+
+/* Login button disabled state */
+.login-btn:disabled {
+  background: #9ca3af !important;
+  border-color: #9ca3af !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+/* Override any global styles that might interfere */
+.login-container * {
+  /* Ensure all login elements are clickable */
+  pointer-events: auto !important;
+}
+
+/* Specific overrides for login form elements */
+.login-container .input-field,
+.login-container .simple-input,
+.login-container .login-btn,
+.login-container .form-group {
+  /* Force clickability */
+  pointer-events: auto !important;
+  user-select: auto !important;
+  -webkit-user-select: auto !important;
+  -moz-user-select: auto !important;
+  -ms-user-select: auto !important;
+  /* Ensure proper positioning */
+  position: relative !important;
+  z-index: 10 !important;
+  /* Remove any isolation that might interfere */
+  isolation: auto !important;
+}
+
+/* Ensure login form appears above any overlays */
+.login-container {
+  position: relative !important;
+  z-index: 1000 !important;
+  /* Ensure container is clickable */
+  pointer-events: auto !important;
+  overflow: visible !important;
+}
+
+/* Override any global button resets that might interfere */
+.login-container button {
+  /* Reset button styles for login */
+  background: #035c62 !important;
+  color: white !important;
+  border: 1px solid #024a4f !important;
+  border-radius: 6px !important;
+  padding: 0.75rem 1.5rem !important;
+  cursor: pointer !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-decoration: none !important;
+  /* Ensure button is clickable */
+  pointer-events: auto !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
+/* Override any global input resets that might interfere */
+.login-container input {
+  /* Reset input styles for login */
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+  color: #2d3748 !important;
+  background: white !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  padding: 0.75rem !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+  transition: border-color 0.3s ease !important;
+  /* Ensure input is clickable */
+  pointer-events: auto !important;
+  cursor: text !important;
+}

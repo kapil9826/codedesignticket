@@ -1,0 +1,76 @@
+/* User Dropdown Fix - Ensure it appears above all content */
+
+/* Force user dropdown to highest z-index */
+.user-dropdown {
+  z-index: 999999 !important;
+  position: fixed !important;
+  top: 60px !important;
+  right: 20px !important;
+  background: white !important;
+  border: 1px solid #035c62 !important;
+  box-shadow: 0 10px 30px rgba(3, 92, 98, 0.2) !important;
+  border-radius: 8px !important;
+  min-width: 200px !important;
+  /* Force above everything */
+  transform: translateZ(0) !important;
+  will-change: transform !important;
+  isolation: isolate !important;
+  overflow: visible !important;
+  display: block !important;
+  /* Portal-specific positioning */
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure dropdown items are visible and clickable */
+.dropdown-item {
+  position: relative !important;
+  z-index: 1 !important;
+  background: white !important;
+  color: #4a5568 !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0.5rem 0.75rem !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  width: 100% !important;
+  text-align: left !important;
+  font-size: 0.9rem !important;
+  border: none !important;
+  overflow: visible !important;
+  /* Ensure button is clickable */
+  pointer-events: auto !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
+.dropdown-item:hover {
+  background: rgba(3, 92, 98, 0.1) !important;
+  color: #2d3748 !important;
+}
+
+/* Override any conflicting styles from other components */
+.ticket-list-container .user-dropdown,
+.ticket-detail-container .user-dropdown,
+.login-container .user-dropdown {
+  z-index: 999999 !important;
+  position: fixed !important;
+  top: 60px !important;
+  right: 20px !important;
+}
+
+/* Ensure no page content interferes */
+.ticket-list-container,
+.ticket-detail-container,
+.login-container {
+  /* Don't create new stacking contexts that could interfere */
+  isolation: auto;
+}
+
+/* Force dropdown above modals and other overlays */
+.modal-overlay ~ .user-dropdown,
+.modal-container ~ .user-dropdown {
+  z-index: 999999 !important;
+}

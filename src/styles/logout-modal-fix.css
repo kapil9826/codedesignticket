@@ -1,0 +1,110 @@
+/* Logout Modal Fix - Ensure it appears above all content */
+
+/* Force logout modal to highest z-index */
+.logout-confirmation-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 9999999 !important;
+  backdrop-filter: blur(2px) !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  /* Ensure modal is visible */
+  overflow: visible !important;
+  /* Force above everything */
+  transform: translateZ(0) !important;
+  will-change: transform !important;
+  isolation: isolate !important;
+}
+
+.logout-confirmation-modal {
+  background: white !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  max-width: 400px !important;
+  width: 90% !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  animation: modalSlideIn 0.3s ease-out !important;
+  position: relative !important;
+  transform: translate(0, 0) !important;
+  z-index: 10000000 !important;
+  /* Ensure modal is visible */
+  display: block !important;
+  /* Force above everything */
+  transform: translateZ(0) !important;
+  will-change: transform !important;
+  isolation: isolate !important;
+}
+
+/* Ensure modal buttons are clickable */
+.logout-cancel-btn,
+.logout-confirm-btn {
+  position: relative !important;
+  z-index: 1 !important;
+  background: #024a4f !important;
+  color: white !important;
+  border: 1px solid #013a3e !important;
+  border-radius: 6px !important;
+  padding: 0.5rem 1rem !important;
+  cursor: pointer !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-decoration: none !important;
+  /* Ensure buttons are clickable */
+  pointer-events: auto !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
+.logout-cancel-btn:hover,
+.logout-confirm-btn:hover {
+  background: #013a3e !important;
+  border-color: #012a2d !important;
+  transform: translateY(-1px) !important;
+}
+
+.logout-cancel-btn:active,
+.logout-confirm-btn:active {
+  transform: translateY(0) !important;
+}
+
+/* Override any conflicting styles */
+.ticket-list-container .logout-confirmation-overlay,
+.ticket-detail-container .logout-confirmation-overlay,
+.login-container .logout-confirmation-overlay {
+  z-index: 9999999 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}
+
+/* Force modal above user dropdown */
+.user-dropdown ~ .logout-confirmation-overlay {
+  z-index: 9999999 !important;
+}
+
+/* Ensure modal appears above all other elements */
+* {
+  /* Don't interfere with logout modal */
+}
+
+.logout-confirmation-overlay * {
+  /* Ensure all modal content is visible */
+  position: relative;
+  z-index: 1;
+}

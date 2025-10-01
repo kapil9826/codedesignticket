@@ -1,0 +1,146 @@
+/* CSS Optimization - Remove duplicates and optimize performance */
+
+/* Common utility classes to prevent duplication */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Common button reset to prevent conflicts */
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+/* Common input reset to prevent conflicts */
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Common link reset to prevent conflicts */
+a {
+  color: inherit;
+  text-decoration: none;
+  background: transparent;
+}
+
+/* Performance optimizations */
+.ticket-list-container,
+.ticket-detail-container,
+.login-container,
+.header,
+.modal-overlay,
+.modal-container {
+  /* Enable hardware acceleration */
+  transform: translateZ(0);
+  will-change: transform;
+  
+  /* Optimize repaints */
+  contain: layout style paint;
+  
+  /* Prevent unnecessary reflows */
+  backface-visibility: hidden;
+}
+
+/* Reduce layout thrashing */
+.ticket-list-container *,
+.ticket-detail-container *,
+.login-container *,
+.header *,
+.modal-overlay *,
+.modal-container * {
+  /* Optimize rendering */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Optimize animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Common animation classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-in-out;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .ticket-list-container,
+  .ticket-detail-container,
+  .login-container {
+    /* Mobile optimizations */
+    contain: layout style paint;
+    will-change: auto;
+  }
+}
+
+/* Print optimizations */
+@media print {
+  .ticket-list-container,
+  .ticket-detail-container,
+  .login-container,
+  .header,
+  .modal-overlay,
+  .modal-container {
+    /* Print-friendly styles */
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+}

@@ -1,0 +1,255 @@
+/* Professional Login Form Fix - Clean and Isolated */
+
+/* Reset any global interference for login page only */
+body:has(.login-container) {
+  /* Ensure body doesn't interfere with login */
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* Login container - clean and isolated */
+.login-container {
+  /* Force proper positioning and layering */
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 1 !important;
+  
+  /* Ensure container is clickable */
+  pointer-events: auto !important;
+  overflow: visible !important;
+  
+  /* Remove any isolation that might interfere */
+  isolation: auto !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* Login card - clean positioning */
+.login-card {
+  position: relative !important;
+  z-index: 10 !important;
+  
+  /* Ensure card is clickable */
+  pointer-events: auto !important;
+  overflow: visible !important;
+  
+  /* Remove any isolation */
+  isolation: auto !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* Login form - clean and functional */
+.login-form {
+  position: relative !important;
+  z-index: 11 !important;
+  
+  /* Ensure form is clickable */
+  pointer-events: auto !important;
+  overflow: visible !important;
+  
+  /* Remove any isolation */
+  isolation: auto !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* Form groups - clean positioning */
+.form-group {
+  position: relative !important;
+  z-index: 12 !important;
+  
+  /* Ensure form groups are clickable */
+  pointer-events: auto !important;
+  overflow: visible !important;
+  
+  /* Remove any isolation */
+  isolation: auto !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* Input fields - clean and functional */
+.simple-input {
+  position: relative !important;
+  z-index: 13 !important;
+  
+  /* Ensure inputs are clickable */
+  pointer-events: auto !important;
+  cursor: text !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  
+  /* Clean styling */
+  background: white !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #2d3748 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+  
+  /* Remove any interference */
+  isolation: auto !important;
+  transform: none !important;
+  will-change: auto !important;
+  overflow: visible !important;
+  
+  /* Ensure proper display */
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Input focus states */
+.simple-input:focus {
+  border-color: #035c62 !important;
+  box-shadow: 0 0 0 3px rgba(3, 92, 98, 0.1) !important;
+  outline: none !important;
+  z-index: 14 !important;
+}
+
+/* Login button - clean and functional */
+.login-button {
+  position: relative !important;
+  z-index: 13 !important;
+  
+  /* Ensure button is clickable */
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  
+  /* Clean styling */
+  background: #035c62 !important;
+  color: white !important;
+  border: 1px solid #024a4f !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  
+  /* Remove any interference */
+  isolation: auto !important;
+  transform: none !important;
+  will-change: auto !important;
+  overflow: visible !important;
+  
+  /* Ensure proper display */
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Button hover states */
+.login-button:hover:not(:disabled) {
+  background: #024a4f !important;
+  border-color: #013a3e !important;
+  transform: translateY(-1px) !important;
+}
+
+.login-button:active:not(:disabled) {
+  transform: translateY(0) !important;
+}
+
+/* Button disabled state */
+.login-button:disabled {
+  background: #9ca3af !important;
+  border-color: #9ca3af !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+/* Override any global button resets */
+.login-container button {
+  /* Reset to login button styles */
+  background: #035c62 !important;
+  color: white !important;
+  border: 1px solid #024a4f !important;
+  border-radius: 4px !important;
+  padding: 0.5rem !important;
+  cursor: pointer !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  font-family: 'Inter', sans-serif !important;
+  transition: all 0.3s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-decoration: none !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
+/* Override any global input resets */
+.login-container input {
+  /* Reset to login input styles */
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+  color: #2d3748 !important;
+  background: white !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 4px !important;
+  padding: 0.5rem !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+  transition: border-color 0.3s ease !important;
+  pointer-events: auto !important;
+  cursor: text !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* Ensure all login elements are clickable */
+.login-container * {
+  pointer-events: auto !important;
+}
+
+/* Remove any global interference */
+.login-container,
+.login-container * {
+  /* Remove any global styles that might interfere */
+  isolation: auto !important;
+  transform: none !important;
+  will-change: auto !important;
+  overflow: visible !important;
+}
+
+/* Force login elements above everything */
+.login-container {
+  z-index: 1 !important;
+}
+
+.login-card {
+  z-index: 10 !important;
+}
+
+.login-form {
+  z-index: 11 !important;
+}
+
+.form-group {
+  z-index: 12 !important;
+}
+
+.simple-input {
+  z-index: 13 !important;
+}
+
+.login-button {
+  z-index: 13 !important;
+}

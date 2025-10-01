@@ -1,0 +1,120 @@
+/* Component CSS Isolation System */
+
+/* Prevent global styles from affecting specific components */
+.ticket-list-container,
+.ticket-list-container * {
+  /* Reset any inherited styles that might conflict */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.ticket-detail-container,
+.ticket-detail-container * {
+  /* Reset any inherited styles that might conflict */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.login-container,
+.login-container * {
+  /* Reset any inherited styles that might conflict */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.header,
+.header * {
+  /* Reset any inherited styles that might conflict */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.modal-overlay,
+.modal-overlay *,
+.modal-container,
+.modal-container * {
+  /* Reset any inherited styles that might conflict */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Ensure each component has its own stacking context */
+.ticket-list-container {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+
+.ticket-detail-container {
+  position: fixed;
+  z-index: 1000;
+  isolation: isolate;
+}
+
+.login-container {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+
+.header {
+  position: fixed;
+  z-index: 10000;
+  isolation: isolate;
+}
+
+.modal-overlay {
+  position: fixed;
+  z-index: 15000;
+  isolation: isolate;
+}
+
+/* Prevent style inheritance conflicts */
+.ticket-list-container input,
+.ticket-list-container button,
+.ticket-list-container select,
+.ticket-list-container textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+.ticket-detail-container input,
+.ticket-detail-container button,
+.ticket-detail-container select,
+.ticket-detail-container textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+.login-container input,
+.login-container button,
+.login-container select,
+.login-container textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+.header input,
+.header button,
+.header select,
+.header textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+.modal-overlay input,
+.modal-overlay button,
+.modal-overlay select,
+.modal-overlay textarea,
+.modal-container input,
+.modal-container button,
+.modal-container select,
+.modal-container textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}

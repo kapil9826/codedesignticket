@@ -1,0 +1,114 @@
+/* CSS Reset and Isolation - Prevents conflicts between components */
+
+/* Reset common conflicting styles */
+* {
+  box-sizing: border-box;
+}
+
+/* Prevent global styles from affecting components */
+.ticket-list-container *,
+.ticket-detail-container *,
+.login-container *,
+.header *,
+.modal-overlay *,
+.modal-container * {
+  box-sizing: border-box;
+}
+
+/* Isolate component styles */
+.ticket-list-container {
+  isolation: isolate;
+}
+
+.ticket-detail-container {
+  isolation: isolate;
+}
+
+.login-container {
+  isolation: isolate;
+}
+
+.header {
+  isolation: isolate;
+}
+
+.modal-overlay {
+  isolation: isolate;
+}
+
+/* Prevent inheritance of conflicting styles */
+.ticket-list-container input,
+.ticket-list-container button,
+.ticket-list-container select,
+.ticket-list-container textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.ticket-detail-container input,
+.ticket-detail-container button,
+.ticket-detail-container select,
+.ticket-detail-container textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.login-container input,
+.login-container button,
+.login-container select,
+.login-container textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.header input,
+.header button,
+.header select,
+.header textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.modal-overlay input,
+.modal-overlay button,
+.modal-overlay select,
+.modal-overlay textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* Z-index management */
+.header {
+  z-index: 99999 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+}
+
+.ticket-detail-container {
+  z-index: 1000;
+}
+
+.modal-overlay {
+  z-index: 15000;
+}
+
+.modal-container {
+  z-index: 15001;
+}
+
+.user-dropdown {
+  z-index: 999999 !important;
+  position: fixed !important;
+}
+
+.ticket-list-container {
+  z-index: 1;
+}
